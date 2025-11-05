@@ -1,40 +1,160 @@
 const express = require('express');
 const router = express.Router();
 const {
-  getOrCreateCart,
+  getCart,
   addToCart,
   updateCartItem,
   removeFromCart,
   clearCart
 } = require('../controllers/cartController');
-const { authenticate } = require('../middlewares/auth');
-const { extractTenant, validateTenantUser } = require('../middlewares/tenant');
-const { validate, addToCartValidator } = require('../utils/validators');
-
-/**
- * Rutas de Carrito
- * Todas las rutas requieren autenticación
- */
+const { extractTenant } = require('../middlewares/tenantMiddleware');
+const { authenticate } = require('../middlewares/authMiddleware');
 
 // Aplicar middlewares a todas las rutas
 router.use(extractTenant);
 router.use(authenticate);
-router.use(validateTenantUser);
 
-// Obtener o crear carrito del usuario
-router.get('/', getOrCreateCart);
-
-// Añadir producto al carrito
-router.post('/items', validate(addToCartValidator), addToCart);
-
-// Actualizar cantidad de un producto en el carrito
-router.put('/items/:productId', updateCartItem);
-
-// Eliminar un producto del carrito
-router.delete('/items/:productId', removeFromCart);
-
-// Vaciar el carrito
+/**
+ * @swagger
+ * /api/cart:
+ *   get:
+ *     tags: [Cart]
+ *     summary: Obtener carrito del usuario
+ *     security:
+ *       - bearerAuth: []
+ *       - tenantId: []
+ *     parameters:
+ *       - in: header
+ *         name: x-tenant-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Carrito obtenido exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Cart'
+ *   delete:
+ *     tags: [Cart]
+ *     summary: Vaciar carrito
+ *     security:
+ *       - bearerAuth: []
+ *       - tenantId: []
+ *     parameters:
+ *       - in: header
+ *         name: x-tenant-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Carrito vaciado
+ */
+router.get('/', getCart);
 router.delete('/', clearCart);
 
-module.exports = router;
+/**
+ * @swagger
+ * /api/cart/items:
+ *   post:
+ *     tags: [Cart]
+ *     summary: Agregar producto al carrito
+ *     security:
+ *       - bearerAuth: []
+ *       - tenantId: []
+ *     parameters:
+ *       - in: header
+ *         name: x-tenant-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - productId
+ *               - quantity
+ *             properties:
+ *               productId:
+ *                 type: string
+ *                 example: 507f1f77bcf86cd799439011
+ *               quantity:
+ *                 type: number
+ *                 minimum: 1
+ *                 example: 2
+ *     responses:
+ *       200:
+ *         description: Producto agregado al carrito
+ *       400:
+ *         description: Stock insuficiente o datos inválidos
+ *       404:
+ *         description: Producto no encontrado
+ */
+router.post('/items', addToCart);
 
+/**
+ * @swagger
+ * /api/cart/items/{productId}:
+ *   put:
+ *     tags: [Cart]
+ *     summary: Actualizar cantidad de producto
+ *     security:
+ *       - bearerAuth: []
+ *       - tenantId: []
+ *     parameters:
+ *       - in: header
+ *         name: x-tenant-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - quantity
+ *             properties:
+ *               quantity:
+ *                 type: number
+ *                 minimum: 1
+ *                 example: 5
+ *     responses:
+ *       200:
+ *         description: Cantidad actualizada
+ *   delete:
+ *     tags: [Cart]
+ *     summary: Eliminar producto del carrito
+ *     security:
+ *       - bearerAuth: []
+ *       - tenantId: []
+ *     parameters:
+ *       - in: header
+ *         name: x-tenant-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Producto eliminado del carrito
+ */
+router.put('/items/:productId', updateCartItem);
+router.delete('/items/:productId', removeFromCart);
+
+module.exports = router;

@@ -1,15 +1,16 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const config = require('./config/env');
 const connectDB = require('./config/database');
 const errorHandler = require('./middlewares/errorHandler');
+const { swaggerUi, swaggerSpec } = require('./config/swagger');
 
 // Importar rutas
-const tenantRoutes = require('./routes/tenantRoutes');
 const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
+const tenantRoutes = require('./routes/tenantRoutes');
 const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const orderRoutes = require('./routes/orderRoutes');
@@ -33,6 +34,13 @@ app.use(cors({
   origin: config.CORS_ORIGIN,
   credentials: true
 }));
+
+// Logger HTTP con Morgan
+if (config.NODE_ENV === 'development') {
+  app.use(morgan('dev')); // Formato colorido para desarrollo
+} else {
+  app.use(morgan('combined')); // Formato Apache para producción
+}
 
 // Rate limiting - prevenir ataques de fuerza bruta
 const limiter = rateLimit({
@@ -59,10 +67,23 @@ app.get('/health', (req, res) => {
   });
 });
 
+// =====================
+// Documentación Swagger
+// =====================
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'E-Commerce API Docs'
+}));
+
+// Endpoint para obtener la especificación JSON
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // API Routes
-app.use('/api/tenants', tenantRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/tenants', tenantRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
