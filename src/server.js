@@ -1,0 +1,107 @@
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const config = require('./config/env');
+const connectDB = require('./config/database');
+const errorHandler = require('./middlewares/errorHandler');
+
+// Importar rutas
+const tenantRoutes = require('./routes/tenantRoutes');
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const productRoutes = require('./routes/productRoutes');
+const cartRoutes = require('./routes/cartRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+
+const app = express();
+
+// =====================
+// Conectar a MongoDB
+// =====================
+connectDB();
+
+// =====================
+// Middlewares Globales
+// =====================
+
+// Seguridad con Helmet
+app.use(helmet());
+
+// CORS
+app.use(cors({
+  origin: config.CORS_ORIGIN,
+  credentials: true
+}));
+
+// Rate limiting - prevenir ataques de fuerza bruta
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // límite de 100 requests por windowMs
+  message: 'Demasiadas peticiones desde esta IP, por favor intenta más tarde.'
+});
+app.use('/api/', limiter);
+
+// Body parser
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// =====================
+// Rutas
+// =====================
+
+// Health check
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API Routes
+app.use('/api/tenants', tenantRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/orders', orderRoutes);
+
+// Ruta 404
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Ruta no encontrada'
+  });
+});
+
+// =====================
+// Manejo de Errores
+// =====================
+app.use(errorHandler);
+
+// =====================
+// Iniciar Servidor
+// =====================
+const PORT = config.PORT;
+
+app.listen(PORT, () => {
+  console.log(`
+  ╔═══════════════════════════════════════════════════╗
+  ║                                                   ║
+  ║   🚀 Server running on port ${PORT}                ║
+  ║   📦 Environment: ${config.NODE_ENV.padEnd(27)} ║
+  ║   🔗 http://localhost:${PORT}                      ║
+  ║                                                   ║
+  ╚═══════════════════════════════════════════════════╝
+  `);
+});
+
+// Manejo de errores no capturados
+process.on('unhandledRejection', (err) => {
+  console.error('❌ Unhandled Rejection:', err);
+  process.exit(1);
+});
+
+module.exports = app;
+
