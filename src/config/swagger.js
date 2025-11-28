@@ -151,6 +151,10 @@ const swaggerOptions = {
         description: 'Gestión de tenants (inquilinos)'
       },
       {
+        name: 'Users',
+        description: 'Gestión de usuarios (solo Admin)'
+      },
+      {
         name: 'Categories',
         description: 'Gestión de categorías de productos'
       },

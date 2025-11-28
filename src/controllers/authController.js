@@ -1,16 +1,11 @@
 const User = require('../models/auth/User');
 const { generateToken } = require('../utils/jwt');
 
-/**
- * Registro de nuevo usuario
- * POST /api/auth/register
- */
 const register = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
-    const tenantId = req.tenantId; // Del middleware extractTenant
+    const tenantId = req.tenantId;
 
-    // Validar campos requeridos
     if (!name || !email || !password) {
       return res.status(400).json({
         message: 'Faltan campos requeridos: name, email, password',
@@ -18,7 +13,6 @@ const register = async (req, res, next) => {
       });
     }
 
-    // Verificar si el usuario ya existe en este tenant
     const existingUser = await User.findOne({ tenantId, email });
     if (existingUser) {
       return res.status(409).json({
@@ -27,17 +21,15 @@ const register = async (req, res, next) => {
       });
     }
 
-    // Crear usuario (password se hashea automáticamente por el middleware pre-save)
     const user = await User.create({
       tenantId,
       name,
       email,
       password,
-      role: role || 'customer', // customer por defecto
+      role: role || 'customer',
       isActive: true
     });
 
-    // Generar token JWT
     const token = generateToken({
       userId: user._id,
       tenantId: user.tenantId,
@@ -45,7 +37,6 @@ const register = async (req, res, next) => {
       email: user.email
     });
 
-    // Respuesta sin password
     const userResponse = {
       id: user._id,
       tenantId: user.tenantId,
@@ -69,16 +60,11 @@ const register = async (req, res, next) => {
   }
 };
 
-/**
- * Login de usuario
- * POST /api/auth/login
- */
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const tenantId = req.tenantId; // Del middleware extractTenant
+    const tenantId = req.tenantId;
 
-    // Validar campos requeridos
     if (!email || !password) {
       return res.status(400).json({
         message: 'Faltan campos requeridos: email, password',
@@ -86,7 +72,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Buscar usuario en este tenant (incluir password con select)
     const user = await User.findOne({ tenantId, email }).select('+password');
 
     if (!user) {
@@ -96,7 +81,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Verificar que el usuario esté activo
     if (!user.isActive) {
       return res.status(403).json({
         message: 'Usuario inactivo',
@@ -104,7 +88,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Verificar password usando el método del modelo
     const isPasswordValid = await user.comparePassword(password);
 
     if (!isPasswordValid) {
@@ -114,7 +97,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Generar token JWT
     const token = generateToken({
       userId: user._id,
       tenantId: user.tenantId,
@@ -122,7 +104,6 @@ const login = async (req, res, next) => {
       email: user.email
     });
 
-    // Respuesta sin password
     const userResponse = {
       id: user._id,
       tenantId: user.tenantId,
@@ -145,7 +126,81 @@ const login = async (req, res, next) => {
   }
 };
 
+const getProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const user = await User.findById(userId).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'Usuario no encontrado',
+        statusCode: 404
+      });
+    }
+
+    res.json({
+      message: 'Perfil obtenido exitosamente',
+      statusCode: 200,
+      data: { user }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const { name, email, phone, addresses, preferences } = req.body;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'Usuario no encontrado',
+        statusCode: 404
+      });
+    }
+
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ 
+        tenantId: user.tenantId, 
+        email, 
+        _id: { $ne: userId } 
+      });
+      
+      if (existingUser) {
+        return res.status(409).json({
+          message: 'El email ya está en uso',
+          statusCode: 409
+        });
+      }
+      user.email = email;
+    }
+
+    if (name) user.name = name;
+    if (phone) user.phone = phone;
+    if (addresses) user.addresses = addresses;
+    if (preferences) user.preferences = preferences;
+
+    await user.save();
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    res.json({
+      message: 'Perfil actualizado exitosamente',
+      statusCode: 200,
+      data: { user: userResponse }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
-  login
+  login,
+  getProfile,
+  updateProfile
 };

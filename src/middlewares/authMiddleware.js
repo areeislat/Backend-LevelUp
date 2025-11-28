@@ -108,6 +108,8 @@ const requireRole = (...rolesPermitidos) => {
 
 module.exports = {
   authenticate,
-  requireRole
+  requireRole,
+  authenticateToken: authenticate, // Alias para compatibilidad
+  requireAdmin: requireRole('admin') // Helper para admin
 };
 

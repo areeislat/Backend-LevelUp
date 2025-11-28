@@ -11,6 +11,7 @@ const { swaggerUi, swaggerSpec } = require('./config/swagger');
 // Importar rutas
 const authRoutes = require('./routes/authRoutes');
 const tenantRoutes = require('./routes/tenantRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 // Catalog routes
 const categoryRoutes = require('./routes/categoryRoutes');
@@ -107,6 +108,7 @@ app.get('/api-docs.json', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tenants', tenantRoutes);
+app.use('/api/users', userRoutes);
 
 // Catalog routes
 app.use('/api/categories', categoryRoutes);
