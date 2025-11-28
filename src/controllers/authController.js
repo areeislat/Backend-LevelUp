@@ -1,9 +1,10 @@
 const User = require('../models/auth/User');
 const { generateToken } = require('../utils/jwt');
 
+// ✅ REGISTER CORREGIDO
 const register = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role } = req.body; // 👈 AHORA USA "name"
     const tenantId = req.tenantId;
 
     if (!name || !email || !password) {
@@ -23,10 +24,10 @@ const register = async (req, res, next) => {
 
     const user = await User.create({
       tenantId,
-      name,
+      nombre: name, // ✅ se guarda correctamente en Mongo
       email,
       password,
-      role: role || 'customer',
+      role: role || 'user',
       isActive: true
     });
 
@@ -40,7 +41,7 @@ const register = async (req, res, next) => {
     const userResponse = {
       id: user._id,
       tenantId: user.tenantId,
-      name: user.name,
+      name: user.nombre,
       email: user.email,
       role: user.role,
       isActive: user.isActive,
@@ -56,10 +57,17 @@ const register = async (req, res, next) => {
       }
     });
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        message: 'Error de validación',
+        errors: error.errors
+      });
+    }
     next(error);
   }
 };
 
+// ✅ LOGIN (ESTE YA ESTABA BIEN)
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -107,7 +115,7 @@ const login = async (req, res, next) => {
     const userResponse = {
       id: user._id,
       tenantId: user.tenantId,
-      name: user.name,
+      name: user.nombre,
       email: user.email,
       role: user.role,
       isActive: user.isActive
@@ -122,10 +130,17 @@ const login = async (req, res, next) => {
       }
     });
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        message: 'Error de validación',
+        errors: error.errors
+      });
+    }
     next(error);
   }
 };
 
+// ✅ PERFIL
 const getProfile = async (req, res, next) => {
   try {
     const userId = req.user.userId;
@@ -148,6 +163,7 @@ const getProfile = async (req, res, next) => {
   }
 };
 
+// ✅ UPDATE PERFIL CORREGIDO (name → nombre)
 const updateProfile = async (req, res, next) => {
   try {
     const userId = req.user.userId;
@@ -178,7 +194,7 @@ const updateProfile = async (req, res, next) => {
       user.email = email;
     }
 
-    if (name) user.name = name;
+    if (name) user.nombre = name; // ✅ CORREGIDO
     if (phone) user.phone = phone;
     if (addresses) user.addresses = addresses;
     if (preferences) user.preferences = preferences;
@@ -194,6 +210,12 @@ const updateProfile = async (req, res, next) => {
       data: { user: userResponse }
     });
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        message: 'Error de validación',
+        errors: error.errors
+      });
+    }
     next(error);
   }
 };
