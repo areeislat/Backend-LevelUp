@@ -28,23 +28,72 @@ router.post('/webhook/:gateway', handleWebhook);
 router.get('/stats', authenticate, requireRole('admin'), getPaymentStats);
 
 /**
- * @route   GET /api/payments
- * @desc    Obtener pagos del usuario
- * @access  Private
+ * @swagger
+ * /api/payments:
+ *   get:
+ *     tags: [Payments]
+ *     summary: Obtener pagos del usuario
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Lista de pagos
  */
 router.get('/', authenticate, getPayments);
 
 /**
- * @route   GET /api/payments/:id
- * @desc    Obtener pago por ID
- * @access  Private
+ * @swagger
+ * /api/payments/{id}:
+ *   get:
+ *     tags: [Payments]
+ *     summary: Obtener pago por ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Pago encontrado
  */
 router.get('/:id', authenticate, getPaymentById);
 
 /**
- * @route   POST /api/payments
- * @desc    Crear pago
- * @access  Private
+ * @swagger
+ * /api/payments:
+ *   post:
+ *     tags: [Payments]
+ *     summary: Crear pago
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               orderId:
+ *                 type: string
+ *               method:
+ *                 type: string
+ *               gateway:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Pago creado
  */
 router.post('/', authenticate, createPayment);
 

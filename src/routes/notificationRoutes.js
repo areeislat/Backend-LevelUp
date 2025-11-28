@@ -27,23 +27,63 @@ router.get('/preferences', authenticate, getPreferences);
 router.put('/preferences', authenticate, updatePreferences);
 
 /**
- * @route   GET /api/notifications
- * @desc    Obtener notificaciones del usuario
- * @access  Private
+ * @swagger
+ * /api/notifications:
+ *   get:
+ *     tags: [Notifications]
+ *     summary: Obtener notificaciones del usuario
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: unreadOnly
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Lista de notificaciones
  */
 router.get('/', authenticate, getNotifications);
 
 /**
- * @route   PATCH /api/notifications/:id/read
- * @desc    Marcar notificación como leída
- * @access  Private
+ * @swagger
+ * /api/notifications/{id}/read:
+ *   patch:
+ *     tags: [Notifications]
+ *     summary: Marcar notificación como leída
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Notificación marcada como leída
  */
 router.patch('/:id/read', authenticate, markAsRead);
 
 /**
- * @route   PATCH /api/notifications/read-all
- * @desc    Marcar todas como leídas
- * @access  Private
+ * @swagger
+ * /api/notifications/read-all:
+ *   patch:
+ *     tags: [Notifications]
+ *     summary: Marcar todas como leídas
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Todas las notificaciones marcadas como leídas
  */
 router.patch('/read-all', authenticate, markAllAsRead);
 

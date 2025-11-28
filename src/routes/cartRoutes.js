@@ -13,16 +13,39 @@ const {
 const { authenticate } = require('../middlewares/authMiddleware');
 
 /**
- * @route   GET /api/cart
- * @desc    Obtener carrito del usuario
- * @access  Public/Private (funciona con o sin autenticación)
+ * @swagger
+ * /api/cart:
+ *   get:
+ *     tags: [Cart]
+ *     summary: Obtener carrito del usuario
+ *     description: Obtiene el carrito actual del usuario autenticado o por sesión
+ *     responses:
+ *       200:
+ *         description: Carrito obtenido exitosamente
  */
 router.get('/', getCart);
 
 /**
- * @route   POST /api/cart/items
- * @desc    Agregar item al carrito
- * @access  Public/Private
+ * @swagger
+ * /api/cart/items:
+ *   post:
+ *     tags: [Cart]
+ *     summary: Agregar item al carrito
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               productId:
+ *                 type: string
+ *               quantity:
+ *                 type: integer
+ *                 default: 1
+ *     responses:
+ *       201:
+ *         description: Item agregado al carrito
  */
 router.post('/items', addItem);
 

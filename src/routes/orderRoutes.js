@@ -19,23 +19,74 @@ const { authenticate, requireRole } = require('../middlewares/authMiddleware');
 router.get('/stats', authenticate, requireRole('admin'), getOrderStats);
 
 /**
- * @route   GET /api/orders
- * @desc    Obtener pedidos del usuario
- * @access  Private
+ * @swagger
+ * /api/orders:
+ *   get:
+ *     tags: [Orders]
+ *     summary: Obtener pedidos del usuario
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Lista de pedidos
  */
 router.get('/', authenticate, getOrders);
 
 /**
- * @route   GET /api/orders/:id
- * @desc    Obtener pedido por ID
- * @access  Private
+ * @swagger
+ * /api/orders/{id}:
+ *   get:
+ *     tags: [Orders]
+ *     summary: Obtener pedido por ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Pedido encontrado
  */
 router.get('/:id', authenticate, getOrderById);
 
 /**
- * @route   POST /api/orders
- * @desc    Crear pedido desde carrito
- * @access  Private
+ * @swagger
+ * /api/orders:
+ *   post:
+ *     tags: [Orders]
+ *     summary: Crear pedido desde carrito
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               shippingAddress:
+ *                 type: object
+ *               paymentMethod:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Pedido creado
  */
 router.post('/', authenticate, createOrder);
 

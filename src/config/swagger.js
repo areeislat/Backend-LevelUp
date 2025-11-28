@@ -151,8 +151,16 @@ const swaggerOptions = {
         description: 'Gestión de tenants (inquilinos)'
       },
       {
+        name: 'Categories',
+        description: 'Gestión de categorías de productos'
+      },
+      {
         name: 'Products',
         description: 'Gestión de productos del catálogo'
+      },
+      {
+        name: 'Reviews',
+        description: 'Reseñas y calificaciones de productos'
       },
       {
         name: 'Cart',
@@ -161,6 +169,22 @@ const swaggerOptions = {
       {
         name: 'Orders',
         description: 'Gestión de órdenes y pedidos'
+      },
+      {
+        name: 'Payments',
+        description: 'Procesamiento de pagos'
+      },
+      {
+        name: 'Loyalty',
+        description: 'Sistema de lealtad y recompensas'
+      },
+      {
+        name: 'Notifications',
+        description: 'Notificaciones de usuario'
+      },
+      {
+        name: 'Tickets',
+        description: 'Sistema de soporte y tickets'
       }
     ]
   },

@@ -22,30 +22,105 @@ const { authenticate, requireRole } = require('../middlewares/authMiddleware');
 router.get('/stats', authenticate, requireRole('admin'), getTicketStats);
 
 /**
- * @route   GET /api/tickets
- * @desc    Obtener tickets del usuario
- * @access  Private
+ * @swagger
+ * /api/tickets:
+ *   get:
+ *     tags: [Tickets]
+ *     summary: Obtener tickets del usuario
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de tickets
  */
 router.get('/', authenticate, getTickets);
 
 /**
- * @route   GET /api/tickets/:id
- * @desc    Obtener ticket por ID
- * @access  Private
+ * @swagger
+ * /api/tickets/{id}:
+ *   get:
+ *     tags: [Tickets]
+ *     summary: Obtener ticket por ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Ticket encontrado
  */
 router.get('/:id', authenticate, getTicketById);
 
 /**
- * @route   POST /api/tickets
- * @desc    Crear ticket
- * @access  Private
+ * @swagger
+ * /api/tickets:
+ *   post:
+ *     tags: [Tickets]
+ *     summary: Crear ticket
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               subject:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               message:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Ticket creado
  */
 router.post('/', authenticate, createTicket);
 
 /**
- * @route   POST /api/tickets/:id/messages
- * @desc    Agregar mensaje al ticket
- * @access  Private
+ * @swagger
+ * /api/tickets/{id}/messages:
+ *   post:
+ *     tags: [Tickets]
+ *     summary: Agregar mensaje al ticket
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Mensaje agregado
  */
 router.post('/:id/messages', authenticate, addMessage);
 

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const config = require('./env');
 
 /**
  * Conecta a la base de datos MongoDB
@@ -6,7 +7,7 @@ const mongoose = require('mongoose');
  */
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+    const conn = await mongoose.connect(config.MONGODB_URI, {
       // Opciones recomendadas para MongoDB
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,

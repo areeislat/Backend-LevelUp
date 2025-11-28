@@ -23,16 +23,30 @@ const { authenticate, requireRole } = require('../middlewares/authMiddleware');
 // ==================== LOYALTY ACCOUNT ====================
 
 /**
- * @route   GET /api/loyalty/account
- * @desc    Obtener cuenta de lealtad del usuario
- * @access  Private
+ * @swagger
+ * /api/loyalty/account:
+ *   get:
+ *     tags: [Loyalty]
+ *     summary: Obtener cuenta de lealtad del usuario
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cuenta de lealtad obtenida
  */
 router.get('/account', authenticate, getMyLoyaltyAccount);
 
 /**
- * @route   GET /api/loyalty/transactions
- * @desc    Obtener historial de transacciones de puntos
- * @access  Private
+ * @swagger
+ * /api/loyalty/transactions:
+ *   get:
+ *     tags: [Loyalty]
+ *     summary: Obtener historial de transacciones de puntos
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Historial de transacciones
  */
 router.get('/transactions', authenticate, getMyTransactions);
 

@@ -13,23 +13,113 @@ const {
 const { authenticate, requireRole } = require('../middlewares/authMiddleware');
 
 /**
- * @route   GET /api/products
- * @desc    Obtener todos los productos con filtros
- * @access  Public
+ * @swagger
+ * /api/products:
+ *   get:
+ *     tags: [Products]
+ *     summary: Obtener todos los productos con filtros
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filtrar por categoría ID
+ *       - in: query
+ *         name: brand
+ *         schema:
+ *           type: string
+ *         description: Filtrar por marca
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *         description: Precio mínimo
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *         description: Precio máximo
+ *       - in: query
+ *         name: inStock
+ *         schema:
+ *           type: boolean
+ *         description: Solo productos en stock
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Búsqueda por texto
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Lista de productos con paginación
  */
 router.get('/', getProducts);
 
 /**
- * @route   GET /api/products/:idOrSlug
- * @desc    Obtener producto por ID o slug
- * @access  Public
+ * @swagger
+ * /api/products/{idOrSlug}:
+ *   get:
+ *     tags: [Products]
+ *     summary: Obtener producto por ID o slug
+ *     parameters:
+ *       - in: path
+ *         name: idOrSlug
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Producto encontrado
+ *       404:
+ *         description: Producto no encontrado
  */
 router.get('/:idOrSlug', getProductById);
 
 /**
- * @route   POST /api/products
- * @desc    Crear producto
- * @access  Private (Admin)
+ * @swagger
+ * /api/products:
+ *   post:
+ *     tags: [Products]
+ *     summary: Crear producto
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - productId
+ *               - name
+ *               - pricing
+ *             properties:
+ *               productId:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               pricing:
+ *                 type: object
+ *                 properties:
+ *                   basePrice:
+ *                     type: number
+ *                   salePrice:
+ *                     type: number
+ *     responses:
+ *       201:
+ *         description: Producto creado
  */
 router.post('/', authenticate, requireRole('admin'), createProduct);
 
