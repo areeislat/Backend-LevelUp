@@ -77,7 +77,7 @@ const getPaymentById = async (req, res, next) => {
 };
 
 /**
- * Crear pago
+ * Crear y Confirmar pago (Simulación de éxito inmediato)
  * POST /api/payments
  */
 const createPayment = async (req, res, next) => {
@@ -85,17 +85,17 @@ const createPayment = async (req, res, next) => {
     const userId = req.user._id;
     const { orderId, method, gateway } = req.body;
 
-    // Verificar que la orden existe y pertenece al usuario
+    // Verificar que la orden existe
     const order = await Order.findOne({ _id: orderId, user: userId });
     if (!order) {
       throw new NotFoundError('Orden no encontrada');
     }
 
-    if (order.payment.status === 'completed') {
+    if (order.payment.status === 'paid') {
       throw new ValidationError('Esta orden ya ha sido pagada');
     }
-
-    // Crear pago
+    
+    // --- SIMULACIÓN: CREAR PAGO PENDIENTE ---
     const payment = await Payment.create({
       order: orderId,
       user: userId,
@@ -103,15 +103,20 @@ const createPayment = async (req, res, next) => {
       currency: 'CLP',
       method,
       gateway,
-      status: 'pending'
+      status: 'pending' // Inicia como pendiente
     });
+    
+    // --- SIMULACIÓN: MARCAR COMO COMPLETADO INMEDIATAMENTE ---
+    
+    // 1. Marcar el pago como completo en el modelo Payment
+    await payment.complete('SIMULATION_SUCCESS', 'AUTH_SIM'); 
 
-    // Actualizar estado de pago en la orden
-    order.payment.status = 'pending';
-    await order.save();
+    // 2. Marcar la orden como pagada (actualiza el estado de la orden a 'confirmed')
+    await order.markAsPaid(payment.transactionId, gateway, 'SIMULATION_SUCCESS');
+    
 
     res.status(201).json({
-      message: 'Pago creado exitosamente',
+      message: 'Pago creado y confirmado exitosamente (Simulación)',
       statusCode: 201,
       data: { payment }
     });
@@ -121,194 +126,16 @@ const createPayment = async (req, res, next) => {
 };
 
 /**
- * Procesar pago (simulación o integración con gateway)
- * POST /api/payments/:id/process
- */
-const processPayment = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { transactionId, gatewayResponse } = req.body;
-
-    const payment = await Payment.findById(id).populate('order');
-    if (!payment) {
-      throw new NotFoundError('Pago no encontrado');
-    }
-
-    if (payment.status !== 'pending') {
-      throw new ValidationError('Este pago ya fue procesado');
-    }
-
-    // Aquí iría la integración con el gateway de pago real
-    // Por ahora simulamos el proceso
-
-    payment.status = 'processing';
-    payment.transactionId = transactionId;
-    payment.gatewayResponse = gatewayResponse;
-    await payment.save();
-
-    res.json({
-      message: 'Pago en proceso',
-      statusCode: 200,
-      data: { payment }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Confirmar pago exitoso
- * POST /api/payments/:id/confirm
- */
-const confirmPayment = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { transactionId } = req.body;
-
-    const payment = await Payment.findById(id).populate('order');
-    if (!payment) {
-      throw new NotFoundError('Pago no encontrado');
-    }
-
-    await payment.markAsCompleted(transactionId);
-
-    res.json({
-      message: 'Pago confirmado exitosamente',
-      statusCode: 200,
-      data: { payment }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Marcar pago como fallido
- * POST /api/payments/:id/fail
- */
-const failPayment = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { errorMessage } = req.body;
-
-    const payment = await Payment.findById(id).populate('order');
-    if (!payment) {
-      throw new NotFoundError('Pago no encontrado');
-    }
-
-    await payment.markAsFailed(errorMessage);
-
-    res.json({
-      message: 'Pago marcado como fallido',
-      statusCode: 200,
-      data: { payment }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Procesar reembolso
- * POST /api/payments/:id/refund
- */
-const refundPayment = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { amount, reason } = req.body;
-
-    const payment = await Payment.findById(id).populate('order');
-    if (!payment) {
-      throw new NotFoundError('Pago no encontrado');
-    }
-
-    await payment.processRefund(amount, reason);
-
-    res.json({
-      message: 'Reembolso procesado exitosamente',
-      statusCode: 200,
-      data: { payment }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Webhook para notificaciones del gateway
+ * Webhook para notificaciones del gateway (Mínima implementación - STUB)
  * POST /api/payments/webhook/:gateway
  */
 const handleWebhook = async (req, res, next) => {
   try {
-    const { gateway } = req.params;
-    const webhookData = req.body;
-
-    // Aquí iría la lógica específica de cada gateway
-    // Por ejemplo: Webpay, MercadoPago, etc.
-
-    console.log(`Webhook recibido de ${gateway}:`, webhookData);
-
-    // Procesar según el gateway
-    // Buscar el pago y actualizar su estado
-
+    // Solo un stub: recibe el webhook y responde OK.
+    console.log(`Webhook recibido de ${req.params.gateway}:`, req.body);
     res.json({
-      message: 'Webhook procesado',
+      message: 'Webhook procesado (STUB)',
       statusCode: 200
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Obtener estadísticas de pagos (solo admin)
- * GET /api/payments/stats
- */
-const getPaymentStats = async (req, res, next) => {
-  try {
-    const { startDate, endDate } = req.query;
-
-    const filter = {};
-    if (startDate || endDate) {
-      filter.createdAt = {};
-      if (startDate) filter.createdAt.$gte = new Date(startDate);
-      if (endDate) filter.createdAt.$lte = new Date(endDate);
-    }
-
-    const [
-      totalPayments,
-      successfulPayments,
-      totalAmount,
-      methodBreakdown,
-      statusBreakdown
-    ] = await Promise.all([
-      Payment.countDocuments(filter),
-      Payment.countDocuments({ ...filter, status: 'completed' }),
-      Payment.aggregate([
-        { $match: { ...filter, status: 'completed' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
-      ]),
-      Payment.aggregate([
-        { $match: filter },
-        { $group: { _id: '$method', count: { $count: {} }, total: { $sum: '$amount' } } }
-      ]),
-      Payment.aggregate([
-        { $match: filter },
-        { $group: { _id: '$status', count: { $count: {} } } }
-      ])
-    ]);
-
-    res.json({
-      message: 'Estadísticas obtenidas exitosamente',
-      statusCode: 200,
-      data: {
-        totalPayments,
-        successfulPayments,
-        totalAmount: totalAmount[0]?.total || 0,
-        successRate: totalPayments > 0 ? (successfulPayments / totalPayments) * 100 : 0,
-        methodBreakdown,
-        statusBreakdown
-      }
     });
   } catch (error) {
     next(error);
@@ -319,10 +146,5 @@ module.exports = {
   getPayments,
   getPaymentById,
   createPayment,
-  processPayment,
-  confirmPayment,
-  failPayment,
-  refundPayment,
-  handleWebhook,
-  getPaymentStats
+  handleWebhook
 };
