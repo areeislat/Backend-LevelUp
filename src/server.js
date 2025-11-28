@@ -16,7 +16,6 @@ const userRoutes = require('./routes/userRoutes');
 // Catalog routes
 const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
-const reviewRoutes = require('./routes/reviewRoutes');
 
 // Orders routes
 const cartRoutes = require('./routes/cartRoutes');
@@ -26,9 +25,6 @@ const paymentRoutes = require('./routes/paymentRoutes');
 // Loyalty routes
 const loyaltyRoutes = require('./routes/loyaltyRoutes');
 
-// Support routes
-const notificationRoutes = require('./routes/notificationRoutes');
-const ticketRoutes = require('./routes/ticketRoutes');
 
 const app = express();
 
@@ -113,7 +109,6 @@ app.use('/api/users', userRoutes);
 // Catalog routes
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/reviews', reviewRoutes);
 
 // Orders routes
 app.use('/api/cart', cartRoutes);
@@ -123,9 +118,7 @@ app.use('/api/payments', paymentRoutes);
 // Loyalty routes
 app.use('/api/loyalty', loyaltyRoutes);
 
-// Support routes
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/tickets', ticketRoutes);
+
 
 // Ruta 404
 app.use('*', (req, res) => {

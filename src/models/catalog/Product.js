@@ -285,34 +285,9 @@ ProductSchema.methods.addStock = async function(quantity, reason, userId) {
     reason,
     performedBy: userId
   });
-  
   return this.save();
 };
-
-// Método: actualizar rating
-ProductSchema.methods.updateRating = async function() {
-  const Review = mongoose.model('Review');
-  const stats = await Review.aggregate([
-    { $match: { product: this._id, isApproved: true } },
-    { 
-      $group: { 
-        _id: null, 
-        avgRating: { $avg: '$rating' },
-        count: { $sum: 1 }
-      } 
-    }
-  ]);
-  
-  if (stats. length > 0) {
-    this.rating = Math.round(stats[0].avgRating * 10) / 10;
-    this.reviewCount = stats[0].count;
-  } else {
-    this.rating = 0;
-    this.reviewCount = 0;
-  }
-  
-  return this.save();
-};
+//
 
 // Static: buscar productos
 ProductSchema.statics.search = async function(query, options = {}) {
@@ -326,7 +301,7 @@ ProductSchema.statics.search = async function(query, options = {}) {
     page = 1,
     limit = 12
   } = options;
-  
+  //Cambio de filter para incluir solo productos activos
   const filter = { isActive: true };
   
   if (query) {

@@ -9,7 +9,6 @@ const Session = require('./auth/Session');
 // Catalog
 const Category = require('./catalog/Category');
 const Product = require('./catalog/Product');
-const Review = require('./catalog/Review');
 
 // Orders
 const Cart = require('./orders/Cart');
@@ -22,9 +21,6 @@ const PointsTransaction = require('./loyalty/PointsTransaction');
 const Reward = require('./loyalty/Reward');
 const RedeemedReward = require('./loyalty/RedeemedReward');
 
-// Support
-const Ticket = require('./support/Ticket');
-const Notification = require('./support/Notification');
 
 module.exports = {
   // Auth & User
@@ -34,7 +30,6 @@ module.exports = {
   // Catalog
   Category,
   Product,
-  Review,
   
   // Orders
   Cart,
@@ -47,9 +42,6 @@ module.exports = {
   Reward,
   RedeemedReward,
   
-  // Support
-  Ticket,
-  Notification,
   
   // Tenant
   Tenant
