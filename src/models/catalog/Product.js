@@ -288,7 +288,7 @@ ProductSchema.methods.addStock = async function(quantity, reason, userId) {
   
   return this.save();
 };
-
+//
 
 // Static: buscar productos
 ProductSchema.statics.search = async function(query, options = {}) {
