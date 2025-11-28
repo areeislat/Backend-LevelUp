@@ -1,132 +1,41 @@
-const Order = require('../models/Order');
-const Cart = require('../models/Cart');
-const Product = require('../models/Product');
+const Order = require('../models/orders/Order');
+const Cart = require('../models/orders/Cart');
+const Product = require('../models/catalog/Product');
+const { ValidationError, NotFoundError } = require('../utils/errors');
 
 /**
- * Crear orden desde el carrito
- * POST /api/orders
- */
-const createOrder = async (req, res, next) => {
-  try {
-    const tenantId = req.tenantId;
-    const userId = req.user.userId;
-
-    // Obtener carrito del usuario
-    const cart = await Cart.findOne({ tenantId, userId }).populate('items.productId');
-
-    if (!cart || cart.items.length === 0) {
-      return res.status(400).json({
-        message: 'El carrito está vacío',
-        statusCode: 400
-      });
-    }
-
-    // Preparar items de la orden con precio actual
-    const orderItems = [];
-    let total = 0;
-
-    for (const cartItem of cart.items) {
-      const product = cartItem.productId;
-
-      // Verificar que el producto existe y está activo
-      if (!product || !product.isActive) {
-        return res.status(400).json({
-          message: `Producto ${product?.name || 'desconocido'} no disponible`,
-          statusCode: 400
-        });
-      }
-
-      // Verificar stock
-      if (product.stock < cartItem.quantity) {
-        return res.status(400).json({
-          message: `Stock insuficiente para ${product.name}`,
-          statusCode: 400
-        });
-      }
-
-      // Agregar item con precio actual
-      orderItems.push({
-        productId: product._id,
-        quantity: cartItem.quantity,
-        price: product.price
-      });
-
-      total += product.price * cartItem.quantity;
-    }
-
-    // Crear orden
-    const order = await Order.create({
-      tenantId,
-      userId,
-      items: orderItems,
-      total,
-      status: 'pending'
-    });
-
-    // Reducir stock de productos
-    for (const item of orderItems) {
-      await Product.findByIdAndUpdate(
-        item.productId,
-        { $inc: { stock: -item.quantity } }
-      );
-    }
-
-    // Vaciar carrito
-    cart.items = [];
-    await cart.save();
-
-    // Poblar la orden con datos de productos
-    await order.populate('items.productId');
-
-    res.status(201).json({
-      message: 'Orden creada exitosamente',
-      statusCode: 201,
-      data: order
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Listar órdenes
+ * Obtener pedidos del usuario
  * GET /api/orders
  */
 const getOrders = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId;
-    const userId = req.user.userId;
-    const userRole = req.user.role;
-    const { page = 1, limit = 10 } = req.query;
+    const userId = req.user._id;
+    const { status, page = 1, limit = 10 } = req.query;
 
-    // Filtro base
-    const filter = { tenantId };
+    const filter = { user: userId };
+    if (status) filter.status = status;
 
-    // Si no es admin, solo ver sus propias órdenes
-    if (userRole !== 'admin') {
-      filter.userId = userId;
-    }
+    const skip = (Number(page) - 1) * Number(limit);
 
-    const skip = (page - 1) * limit;
+    const [orders, total] = await Promise.all([
+      Order.find(filter)
+        .populate('items.product', 'name image')
+        .sort('-createdAt')
+        .skip(skip)
+        .limit(Number(limit)),
+      Order.countDocuments(filter)
+    ]);
 
-    const orders = await Order.find(filter)
-      .populate('items.productId')
-      .limit(parseInt(limit))
-      .skip(skip)
-      .sort({ createdAt: -1 });
-
-    const total = await Order.countDocuments(filter);
-
-    res.status(200).json({
-      message: 'Órdenes obtenidas exitosamente',
+    res.json({
+      message: 'Pedidos obtenidos exitosamente',
       statusCode: 200,
       data: {
         orders,
         pagination: {
+          page: Number(page),
+          limit: Number(limit),
           total,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(total / limit)
+          pages: Math.ceil(total / Number(limit))
         }
       }
     });
@@ -136,36 +45,33 @@ const getOrders = async (req, res, next) => {
 };
 
 /**
- * Obtener orden por ID
+ * Obtener pedido por ID
  * GET /api/orders/:id
  */
 const getOrderById = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId;
-    const userId = req.user.userId;
-    const userRole = req.user.role;
     const { id } = req.params;
+    const userId = req.user._id;
+    const userRole = req.user.role;
 
-    const filter = { _id: id, tenantId };
-
-    // Si no es admin, solo puede ver sus propias órdenes
+    const filter = { _id: id };
+    // Si no es admin, solo puede ver sus propios pedidos
     if (userRole !== 'admin') {
-      filter.userId = userId;
+      filter.user = userId;
     }
 
-    const order = await Order.findOne(filter).populate('items.productId');
+    const order = await Order.findOne(filter)
+      .populate('items.product', 'name image brand')
+      .populate('user', 'name email');
 
     if (!order) {
-      return res.status(404).json({
-        message: 'Orden no encontrada',
-        statusCode: 404
-      });
+      throw new NotFoundError('Pedido no encontrado');
     }
 
-    res.status(200).json({
-      message: 'Orden obtenida exitosamente',
+    res.json({
+      message: 'Pedido obtenido exitosamente',
       statusCode: 200,
-      data: order
+      data: { order }
     });
   } catch (error) {
     next(error);
@@ -173,51 +79,244 @@ const getOrderById = async (req, res, next) => {
 };
 
 /**
- * Actualizar estado de orden (solo admin)
- * PUT /api/orders/:id/status
+ * Crear pedido desde carrito
+ * POST /api/orders
  */
-const updateOrderStatus = async (req, res, next) => {
+const createOrder = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId;
-    const { id } = req.params;
-    const { status } = req.body;
+    const userId = req.user._id;
+    const { shippingAddress, paymentMethod, notes } = req.body;
 
-    // Validar status
-    const validStatuses = ['pending', 'paid', 'shipped', 'cancelled'];
-    if (!status || !validStatuses.includes(status)) {
-      return res.status(400).json({
-        message: `Status inválido. Debe ser uno de: ${validStatuses.join(', ')}`,
-        statusCode: 400
-      });
+    // Validar dirección de envío
+    if (!shippingAddress || !shippingAddress.direccion || !shippingAddress.comuna) {
+      throw new ValidationError('Dirección de envío incompleta');
     }
 
-    const order = await Order.findOne({ _id: id, tenantId });
+    // Obtener carrito del usuario
+    const cart = await Cart.findOne({ user: userId }).populate('items.product');
 
-    if (!order) {
-      return res.status(404).json({
-        message: 'Orden no encontrada',
-        statusCode: 404
-      });
+    if (!cart || cart.items.length === 0) {
+      throw new ValidationError('El carrito está vacío');
     }
 
-    // Si se cancela, devolver stock
-    if (status === 'cancelled' && order.status !== 'cancelled') {
-      for (const item of order.items) {
-        await Product.findByIdAndUpdate(
-          item.productId,
-          { $inc: { stock: item.quantity } }
+    // Verificar disponibilidad de stock
+    for (const item of cart.items) {
+      if (!item.product.isActive || item.product.isDeleted) {
+        throw new ValidationError(`El producto ${item.product.name} ya no está disponible`);
+      }
+
+      if (item.product.inventory.stock < item.quantity) {
+        throw new ValidationError(
+          `Stock insuficiente para ${item.product.name}. Disponible: ${item.product.inventory.stock}`
         );
       }
     }
 
-    order.status = status;
-    await order.save();
-    await order.populate('items.productId');
+    // Crear items del pedido
+    const orderItems = cart.items.map(item => ({
+      product: item.product._id,
+      productId: item.product.productId,
+      name: item.product.name,
+      image: item.product.images?.[0],
+      brand: item.product.brand,
+      price: item.price,
+      quantity: item.quantity,
+      subtotal: item.subtotal
+    }));
 
-    res.status(200).json({
-      message: 'Estado de orden actualizado',
+    // Crear pedido
+    const order = await Order.create({
+      user: userId,
+      items: orderItems,
+      subtotal: cart.subtotal,
+      discount: cart.discount,
+      shipping: {
+        method: 'standard',
+        address: shippingAddress,
+        cost: cart.shippingCost
+      },
+      tax: cart.tax,
+      total: cart.total,
+      payment: {
+        method: paymentMethod || 'pending',
+        status: 'pending'
+      },
+      coupon: cart.coupon,
+      notes,
+      status: 'pending'
+    });
+
+    // Reservar stock de los productos
+    for (const item of cart.items) {
+      await item.product.reserveStock(item.quantity, order._id);
+    }
+
+    // Limpiar carrito
+    await cart.clear();
+
+    await order.populate('items.product', 'name image');
+
+    res.status(201).json({
+      message: 'Pedido creado exitosamente',
+      statusCode: 201,
+      data: { order }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Cancelar pedido
+ * POST /api/orders/:id/cancel
+ */
+const cancelOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+    const { reason } = req.body;
+
+    const order = await Order.findOne({ _id: id, user: userId });
+
+    if (!order) {
+      throw new NotFoundError('Pedido no encontrado');
+    }
+
+    await order.cancel(reason);
+
+    res.json({
+      message: 'Pedido cancelado exitosamente',
       statusCode: 200,
-      data: order
+      data: { order }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Actualizar estado del pedido (solo admin)
+ * PATCH /api/orders/:id/status
+ */
+const updateOrderStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      throw new ValidationError('Estado inválido');
+    }
+
+    const order = await Order.findById(id);
+    if (!order) {
+      throw new NotFoundError('Pedido no encontrado');
+    }
+
+    order.status = status;
+    order.timeline.push({
+      status,
+      date: new Date(),
+      note: `Estado actualizado a ${status}`
+    });
+
+    if (status === 'confirmed') {
+      order.confirmedAt = new Date();
+    } else if (status === 'shipped') {
+      order.shippedAt = new Date();
+    } else if (status === 'delivered') {
+      order.deliveredAt = new Date();
+    }
+
+    await order.save();
+
+    res.json({
+      message: 'Estado del pedido actualizado',
+      statusCode: 200,
+      data: { order }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Actualizar información de envío (solo admin)
+ * PATCH /api/orders/:id/shipping
+ */
+const updateShippingInfo = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { carrier, trackingCode, trackingUrl } = req.body;
+
+    const order = await Order.findById(id);
+    if (!order) {
+      throw new NotFoundError('Pedido no encontrado');
+    }
+
+    if (carrier) order.shipping.carrier = carrier;
+    if (trackingCode) order.shipping.trackingCode = trackingCode;
+    if (trackingUrl) order.shipping.trackingUrl = trackingUrl;
+
+    await order.save();
+
+    res.json({
+      message: 'Información de envío actualizada',
+      statusCode: 200,
+      data: { order }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Obtener estadísticas de pedidos (solo admin)
+ * GET /api/orders/stats
+ */
+const getOrderStats = async (req, res, next) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const filter = {};
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    const [
+      totalOrders,
+      totalRevenue,
+      statusBreakdown,
+      avgOrderValue
+    ] = await Promise.all([
+      Order.countDocuments(filter),
+      Order.aggregate([
+        { $match: filter },
+        { $match: { status: { $in: ['delivered', 'shipped', 'processing'] } } },
+        { $group: { _id: null, total: { $sum: '$total' } } }
+      ]),
+      Order.aggregate([
+        { $match: filter },
+        { $group: { _id: '$status', count: { $count: {} } } }
+      ]),
+      Order.aggregate([
+        { $match: filter },
+        { $match: { status: { $in: ['delivered', 'shipped', 'processing'] } } },
+        { $group: { _id: null, avg: { $avg: '$total' } } }
+      ])
+    ]);
+
+    res.json({
+      message: 'Estadísticas obtenidas exitosamente',
+      statusCode: 200,
+      data: {
+        totalOrders,
+        totalRevenue: totalRevenue[0]?.total || 0,
+        avgOrderValue: avgOrderValue[0]?.avg || 0,
+        statusBreakdown
+      }
     });
   } catch (error) {
     next(error);
@@ -225,8 +324,11 @@ const updateOrderStatus = async (req, res, next) => {
 };
 
 module.exports = {
-  createOrder,
   getOrders,
   getOrderById,
-  updateOrderStatus
+  createOrder,
+  cancelOrder,
+  updateOrderStatus,
+  updateShippingInfo,
+  getOrderStats
 };

@@ -28,4 +28,3 @@ const tenantSchema = new mongoose.Schema({
 // El índice para slug ya se crea automáticamente por la opción unique: true
 
 module.exports = mongoose.model('Tenant', tenantSchema);
-

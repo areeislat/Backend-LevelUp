@@ -1,42 +1,61 @@
-const Product = require('../models/Product');
+const Product = require('../models/catalog/Product');
+const { ValidationError, NotFoundError } = require('../utils/errors');
 
 /**
- * Listar productos del tenant
+ * Obtener todos los productos con filtros
  * GET /api/products
  */
 const getProducts = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId; // Del middleware extractTenant
-    const { isActive, page = 1, limit = 20 } = req.query;
+    const {
+      category,
+      brand,
+      minPrice,
+      maxPrice,
+      inStock,
+      featured,
+      search,
+      sort = '-createdAt',
+      page = 1,
+      limit = 20
+    } = req.query;
 
-    // Filtro base por tenant
-    const filter = { tenantId };
+    const filter = { isActive: true, isDeleted: false };
 
-    // Filtro opcional por isActive
-    if (isActive !== undefined) {
-      filter.isActive = isActive === 'true';
+    if (category) filter.category = category;
+    if (brand) filter.brand = brand;
+    if (minPrice || maxPrice) {
+      filter['pricing.salePrice'] = {};
+      if (minPrice) filter['pricing.salePrice'].$gte = Number(minPrice);
+      if (maxPrice) filter['pricing.salePrice'].$lte = Number(maxPrice);
+    }
+    if (inStock === 'true') filter['inventory.stock'] = { $gt: 0 };
+    if (featured === 'true') filter.isFeatured = true;
+    if (search) {
+      filter.$text = { $search: search };
     }
 
-    // Paginación
-    const skip = (page - 1) * limit;
+    const skip = (Number(page) - 1) * Number(limit);
 
-    const products = await Product.find(filter)
-      .limit(parseInt(limit))
-      .skip(skip)
-      .sort({ createdAt: -1 });
+    const [products, total] = await Promise.all([
+      Product.find(filter)
+        .populate('category', 'name slug')
+        .sort(sort)
+        .skip(skip)
+        .limit(Number(limit)),
+      Product.countDocuments(filter)
+    ]);
 
-    const total = await Product.countDocuments(filter);
-
-    res.status(200).json({
+    res.json({
       message: 'Productos obtenidos exitosamente',
       statusCode: 200,
       data: {
         products,
         pagination: {
+          page: Number(page),
+          limit: Number(limit),
           total,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(total / limit)
+          pages: Math.ceil(total / Number(limit))
         }
       }
     });
@@ -46,27 +65,33 @@ const getProducts = async (req, res, next) => {
 };
 
 /**
- * Obtener producto por ID
- * GET /api/products/:id
+ * Obtener producto por ID o slug
+ * GET /api/products/:idOrSlug
  */
 const getProductById = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId;
-    const { id } = req.params;
+    const { idOrSlug } = req.params;
 
-    const product = await Product.findOne({ _id: id, tenantId });
+    const product = await Product.findOne({
+      $or: [
+        { _id: idOrSlug.match(/^[0-9a-fA-F]{24}$/) ? idOrSlug : null },
+        { slug: idOrSlug }
+      ],
+      isActive: true,
+      isDeleted: false
+    }).populate('category', 'name slug');
 
     if (!product) {
-      return res.status(404).json({
-        message: 'Producto no encontrado',
-        statusCode: 404
-      });
+      throw new NotFoundError('Producto no encontrado');
     }
 
-    res.status(200).json({
+    // Incrementar vistas
+    await product.incrementViews();
+
+    res.json({
       message: 'Producto obtenido exitosamente',
       statusCode: 200,
-      data: product
+      data: { product }
     });
   } catch (error) {
     next(error);
@@ -74,35 +99,19 @@ const getProductById = async (req, res, next) => {
 };
 
 /**
- * Crear producto (solo admin)
+ * Crear producto
  * POST /api/products
  */
 const createProduct = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId;
-    const { name, description, price, stock } = req.body;
+    const productData = req.body;
 
-    // Validar campos requeridos
-    if (!name || price === undefined || stock === undefined) {
-      return res.status(400).json({
-        message: 'Faltan campos requeridos: name, price, stock',
-        statusCode: 400
-      });
-    }
-
-    const product = await Product.create({
-      tenantId,
-      name,
-      description,
-      price,
-      stock,
-      isActive: true
-    });
+    const product = await Product.create(productData);
 
     res.status(201).json({
       message: 'Producto creado exitosamente',
       statusCode: 201,
-      data: product
+      data: { product }
     });
   } catch (error) {
     next(error);
@@ -110,37 +119,28 @@ const createProduct = async (req, res, next) => {
 };
 
 /**
- * Actualizar producto (solo admin)
+ * Actualizar producto
  * PUT /api/products/:id
  */
 const updateProduct = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId;
     const { id } = req.params;
-    const { name, description, price, stock, isActive } = req.body;
+    const updates = req.body;
 
-    const product = await Product.findOne({ _id: id, tenantId });
+    const product = await Product.findByIdAndUpdate(
+      id,
+      updates,
+      { new: true, runValidators: true }
+    );
 
     if (!product) {
-      return res.status(404).json({
-        message: 'Producto no encontrado',
-        statusCode: 404
-      });
+      throw new NotFoundError('Producto no encontrado');
     }
 
-    // Actualizar campos
-    if (name !== undefined) product.name = name;
-    if (description !== undefined) product.description = description;
-    if (price !== undefined) product.price = price;
-    if (stock !== undefined) product.stock = stock;
-    if (isActive !== undefined) product.isActive = isActive;
-
-    await product.save();
-
-    res.status(200).json({
+    res.json({
       message: 'Producto actualizado exitosamente',
       statusCode: 200,
-      data: product
+      data: { product }
     });
   } catch (error) {
     next(error);
@@ -148,31 +148,105 @@ const updateProduct = async (req, res, next) => {
 };
 
 /**
- * Eliminar/Desactivar producto (solo admin)
+ * Eliminar producto (soft delete)
  * DELETE /api/products/:id
  */
 const deleteProduct = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId;
     const { id } = req.params;
 
-    const product = await Product.findOne({ _id: id, tenantId });
+    const product = await Product.findByIdAndUpdate(
+      id,
+      { isDeleted: true, deletedAt: new Date() },
+      { new: true }
+    );
 
     if (!product) {
-      return res.status(404).json({
-        message: 'Producto no encontrado',
-        statusCode: 404
-      });
+      throw new NotFoundError('Producto no encontrado');
     }
 
-    // Soft delete - marcar como inactivo
-    product.isActive = false;
-    await product.save();
-
-    res.status(200).json({
-      message: 'Producto desactivado exitosamente',
+    res.json({
+      message: 'Producto eliminado exitosamente',
       statusCode: 200,
-      data: product
+      data: { product }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Actualizar stock de producto
+ * PATCH /api/products/:id/stock
+ */
+const updateStock = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { quantity, type, reason, orderId } = req.body;
+
+    const product = await Product.findById(id);
+    if (!product) {
+      throw new NotFoundError('Producto no encontrado');
+    }
+
+    await product.updateStock(quantity, type, reason, req.user?._id, orderId);
+
+    res.json({
+      message: 'Stock actualizado exitosamente',
+      statusCode: 200,
+      data: { product }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Reservar stock
+ * POST /api/products/:id/reserve
+ */
+const reserveStock = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { quantity, orderId } = req.body;
+
+    const product = await Product.findById(id);
+    if (!product) {
+      throw new NotFoundError('Producto no encontrado');
+    }
+
+    await product.reserveStock(quantity, orderId);
+
+    res.json({
+      message: 'Stock reservado exitosamente',
+      statusCode: 200,
+      data: { product }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Liberar stock reservado
+ * POST /api/products/:id/release
+ */
+const releaseStock = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { quantity, orderId } = req.body;
+
+    const product = await Product.findById(id);
+    if (!product) {
+      throw new NotFoundError('Producto no encontrado');
+    }
+
+    await product.releaseReservedStock(quantity, orderId);
+
+    res.json({
+      message: 'Stock liberado exitosamente',
+      statusCode: 200,
+      data: { product }
     });
   } catch (error) {
     next(error);
@@ -184,5 +258,8 @@ module.exports = {
   getProductById,
   createProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  updateStock,
+  reserveStock,
+  releaseStock
 };

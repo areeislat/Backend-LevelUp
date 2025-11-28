@@ -11,9 +11,23 @@ const { swaggerUi, swaggerSpec } = require('./config/swagger');
 // Importar rutas
 const authRoutes = require('./routes/authRoutes');
 const tenantRoutes = require('./routes/tenantRoutes');
+
+// Catalog routes
+const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+
+// Orders routes
 const cartRoutes = require('./routes/cartRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+
+// Loyalty routes
+const loyaltyRoutes = require('./routes/loyaltyRoutes');
+
+// Support routes
+const notificationRoutes = require('./routes/notificationRoutes');
+const ticketRoutes = require('./routes/ticketRoutes');
 
 const app = express();
 
@@ -93,9 +107,23 @@ app.get('/api-docs.json', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tenants', tenantRoutes);
+
+// Catalog routes
+app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/reviews', reviewRoutes);
+
+// Orders routes
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/payments', paymentRoutes);
+
+// Loyalty routes
+app.use('/api/loyalty', loyaltyRoutes);
+
+// Support routes
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/tickets', ticketRoutes);
 
 // Ruta 404
 app.use('*', (req, res) => {

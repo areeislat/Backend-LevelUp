@@ -2,159 +2,70 @@ const express = require('express');
 const router = express.Router();
 const {
   getCart,
-  addToCart,
-  updateCartItem,
-  removeFromCart,
-  clearCart
+  addItem,
+  updateItemQuantity,
+  removeItem,
+  clearCart,
+  applyCoupon,
+  removeCoupon,
+  mergeCart
 } = require('../controllers/cartController');
-const { extractTenant } = require('../middlewares/tenantMiddleware');
 const { authenticate } = require('../middlewares/authMiddleware');
 
-// Aplicar middlewares a todas las rutas
-router.use(extractTenant);
-router.use(authenticate);
-
 /**
- * @swagger
- * /api/cart:
- *   get:
- *     tags: [Cart]
- *     summary: Obtener carrito del usuario
- *     security:
- *       - bearerAuth: []
- *       - tenantId: []
- *     parameters:
- *       - in: header
- *         name: x-tenant-id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Carrito obtenido exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Cart'
- *   delete:
- *     tags: [Cart]
- *     summary: Vaciar carrito
- *     security:
- *       - bearerAuth: []
- *       - tenantId: []
- *     parameters:
- *       - in: header
- *         name: x-tenant-id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Carrito vaciado
+ * @route   GET /api/cart
+ * @desc    Obtener carrito del usuario
+ * @access  Public/Private (funciona con o sin autenticación)
  */
 router.get('/', getCart);
+
+/**
+ * @route   POST /api/cart/items
+ * @desc    Agregar item al carrito
+ * @access  Public/Private
+ */
+router.post('/items', addItem);
+
+/**
+ * @route   PUT /api/cart/items/:productId
+ * @desc    Actualizar cantidad de un item
+ * @access  Public/Private
+ */
+router.put('/items/:productId', updateItemQuantity);
+
+/**
+ * @route   DELETE /api/cart/items/:productId
+ * @desc    Eliminar item del carrito
+ * @access  Public/Private
+ */
+router.delete('/items/:productId', removeItem);
+
+/**
+ * @route   DELETE /api/cart
+ * @desc    Limpiar carrito
+ * @access  Public/Private
+ */
 router.delete('/', clearCart);
 
 /**
- * @swagger
- * /api/cart/items:
- *   post:
- *     tags: [Cart]
- *     summary: Agregar producto al carrito
- *     security:
- *       - bearerAuth: []
- *       - tenantId: []
- *     parameters:
- *       - in: header
- *         name: x-tenant-id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - productId
- *               - quantity
- *             properties:
- *               productId:
- *                 type: string
- *                 example: 507f1f77bcf86cd799439011
- *               quantity:
- *                 type: number
- *                 minimum: 1
- *                 example: 2
- *     responses:
- *       200:
- *         description: Producto agregado al carrito
- *       400:
- *         description: Stock insuficiente o datos inválidos
- *       404:
- *         description: Producto no encontrado
+ * @route   POST /api/cart/coupon
+ * @desc    Aplicar cupón de descuento
+ * @access  Public/Private
  */
-router.post('/items', addToCart);
+router.post('/coupon', applyCoupon);
 
 /**
- * @swagger
- * /api/cart/items/{productId}:
- *   put:
- *     tags: [Cart]
- *     summary: Actualizar cantidad de producto
- *     security:
- *       - bearerAuth: []
- *       - tenantId: []
- *     parameters:
- *       - in: header
- *         name: x-tenant-id
- *         required: true
- *         schema:
- *           type: string
- *       - in: path
- *         name: productId
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - quantity
- *             properties:
- *               quantity:
- *                 type: number
- *                 minimum: 1
- *                 example: 5
- *     responses:
- *       200:
- *         description: Cantidad actualizada
- *   delete:
- *     tags: [Cart]
- *     summary: Eliminar producto del carrito
- *     security:
- *       - bearerAuth: []
- *       - tenantId: []
- *     parameters:
- *       - in: header
- *         name: x-tenant-id
- *         required: true
- *         schema:
- *           type: string
- *       - in: path
- *         name: productId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Producto eliminado del carrito
+ * @route   DELETE /api/cart/coupon
+ * @desc    Remover cupón
+ * @access  Public/Private
  */
-router.put('/items/:productId', updateCartItem);
-router.delete('/items/:productId', removeFromCart);
+router.delete('/coupon', removeCoupon);
+
+/**
+ * @route   POST /api/cart/merge
+ * @desc    Migrar carrito de sesión a usuario
+ * @access  Private
+ */
+router.post('/merge', authenticate, mergeCart);
 
 module.exports = router;

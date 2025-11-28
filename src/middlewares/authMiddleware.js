@@ -42,7 +42,8 @@ const authenticate = (req, res, next) => {
 
     // 6. Guardar información del usuario en req.user
     req.user = {
-      userId: decoded.userId,
+      _id: decoded.userId,
+      userId: decoded.userId, // Mantener compatibilidad
       tenantId: decoded.tenantId,
       role: decoded.role,
       email: decoded.email

@@ -1,5 +1,6 @@
-const Cart = require('../models/Cart');
-const Product = require('../models/Product');
+const Cart = require('../models/orders/Cart');
+const Product = require('../models/catalog/Product');
+const { ValidationError, NotFoundError } = require('../utils/errors');
 
 /**
  * Obtener carrito del usuario
@@ -7,24 +8,21 @@ const Product = require('../models/Product');
  */
 const getCart = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId;
-    const userId = req.user.userId;
+    const userId = req.user?._id;
+    const sessionId = req.sessionID || req.headers['x-session-id'];
 
-    let cart = await Cart.findOne({ tenantId, userId }).populate('items.productId');
+    const filter = userId ? { user: userId } : { sessionId };
 
-    // Si no existe carrito, crear uno vacío
+    let cart = await Cart.findOne(filter).populate('items.product', 'name image pricing inventory');
+
     if (!cart) {
-      cart = await Cart.create({
-        tenantId,
-        userId,
-        items: []
-      });
+      cart = await Cart.create(userId ? { user: userId } : { sessionId });
     }
 
-    res.status(200).json({
+    res.json({
       message: 'Carrito obtenido exitosamente',
       statusCode: 200,
-      data: cart
+      data: { cart }
     });
   } catch (error) {
     next(error);
@@ -32,72 +30,49 @@ const getCart = async (req, res, next) => {
 };
 
 /**
- * Agregar producto al carrito
+ * Agregar item al carrito
  * POST /api/cart/items
  */
-const addToCart = async (req, res, next) => {
+const addItem = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId;
-    const userId = req.user.userId;
-    const { productId, quantity } = req.body;
+    const userId = req.user?._id;
+    const sessionId = req.sessionID || req.headers['x-session-id'];
+    const { productId, quantity = 1 } = req.body;
 
-    // Validar campos requeridos
-    if (!productId || !quantity || quantity < 1) {
-      return res.status(400).json({
-        message: 'Faltan campos requeridos: productId, quantity (mínimo 1)',
-        statusCode: 400
-      });
-    }
-
-    // Verificar que el producto existe y pertenece al tenant
-    const product = await Product.findOne({ _id: productId, tenantId, isActive: true });
-
+    // Verificar que el producto existe
+    const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({
-        message: 'Producto no encontrado o inactivo',
-        statusCode: 404
-      });
+      throw new NotFoundError('Producto no encontrado');
     }
 
-    // Verificar stock disponible
-    if (product.stock < quantity) {
-      return res.status(400).json({
-        message: 'Stock insuficiente',
-        statusCode: 400
-      });
+    if (!product.isActive || product.isDeleted) {
+      throw new ValidationError('Producto no disponible');
     }
 
-    // Buscar o crear carrito
-    let cart = await Cart.findOne({ tenantId, userId });
+    // Obtener o crear carrito
+    const filter = userId ? { user: userId } : { sessionId };
+    let cart = await Cart.findOne(filter);
 
     if (!cart) {
-      cart = new Cart({
-        tenantId,
-        userId,
-        items: []
-      });
+      cart = await Cart.create(userId ? { user: userId } : { sessionId });
     }
 
-    // Buscar si el producto ya está en el carrito
-    const existingItemIndex = cart.items.findIndex(
-      item => item.productId.toString() === productId.toString()
-    );
+    // Agregar item
+    await cart.addItem({
+      product: product._id,
+      productId: product.productId,
+      name: product.name,
+      image: product.images?.[0],
+      price: product.pricing.salePrice,
+      quantity
+    });
 
-    if (existingItemIndex >= 0) {
-      // Actualizar cantidad
-      cart.items[existingItemIndex].quantity += quantity;
-    } else {
-      // Agregar nuevo item
-      cart.items.push({ productId, quantity });
-    }
+    await cart.populate('items.product', 'name image pricing inventory');
 
-    await cart.save();
-    await cart.populate('items.productId');
-
-    res.status(200).json({
+    res.status(201).json({
       message: 'Producto agregado al carrito',
-      statusCode: 200,
-      data: cart
+      statusCode: 201,
+      data: { cart }
     });
   } catch (error) {
     next(error);
@@ -105,64 +80,30 @@ const addToCart = async (req, res, next) => {
 };
 
 /**
- * Actualizar cantidad de producto en carrito
+ * Actualizar cantidad de un item
  * PUT /api/cart/items/:productId
  */
-const updateCartItem = async (req, res, next) => {
+const updateItemQuantity = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId;
-    const userId = req.user.userId;
+    const userId = req.user?._id;
+    const sessionId = req.sessionID || req.headers['x-session-id'];
     const { productId } = req.params;
     const { quantity } = req.body;
 
-    // Validar quantity
-    if (quantity === undefined || quantity < 1) {
-      return res.status(400).json({
-        message: 'La cantidad debe ser al menos 1',
-        statusCode: 400
-      });
-    }
-
-    const cart = await Cart.findOne({ tenantId, userId });
+    const filter = userId ? { user: userId } : { sessionId };
+    const cart = await Cart.findOne(filter);
 
     if (!cart) {
-      return res.status(404).json({
-        message: 'Carrito no encontrado',
-        statusCode: 404
-      });
+      throw new NotFoundError('Carrito no encontrado');
     }
 
-    // Buscar el item en el carrito
-    const itemIndex = cart.items.findIndex(
-      item => item.productId.toString() === productId.toString()
-    );
+    await cart.updateItemQuantity(productId, quantity);
+    await cart.populate('items.product', 'name image pricing inventory');
 
-    if (itemIndex < 0) {
-      return res.status(404).json({
-        message: 'Producto no encontrado en el carrito',
-        statusCode: 404
-      });
-    }
-
-    // Verificar stock
-    const product = await Product.findOne({ _id: productId, tenantId });
-    if (product && product.stock < quantity) {
-      return res.status(400).json({
-        message: 'Stock insuficiente',
-        statusCode: 400
-      });
-    }
-
-    // Actualizar cantidad
-    cart.items[itemIndex].quantity = quantity;
-
-    await cart.save();
-    await cart.populate('items.productId');
-
-    res.status(200).json({
+    res.json({
       message: 'Cantidad actualizada',
       statusCode: 200,
-      data: cart
+      data: { cart }
     });
   } catch (error) {
     next(error);
@@ -170,36 +111,29 @@ const updateCartItem = async (req, res, next) => {
 };
 
 /**
- * Eliminar producto del carrito
+ * Eliminar item del carrito
  * DELETE /api/cart/items/:productId
  */
-const removeFromCart = async (req, res, next) => {
+const removeItem = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId;
-    const userId = req.user.userId;
+    const userId = req.user?._id;
+    const sessionId = req.sessionID || req.headers['x-session-id'];
     const { productId } = req.params;
 
-    const cart = await Cart.findOne({ tenantId, userId });
+    const filter = userId ? { user: userId } : { sessionId };
+    const cart = await Cart.findOne(filter);
 
     if (!cart) {
-      return res.status(404).json({
-        message: 'Carrito no encontrado',
-        statusCode: 404
-      });
+      throw new NotFoundError('Carrito no encontrado');
     }
 
-    // Filtrar el item
-    cart.items = cart.items.filter(
-      item => item.productId.toString() !== productId.toString()
-    );
+    await cart.removeItem(productId);
+    await cart.populate('items.product', 'name image pricing inventory');
 
-    await cart.save();
-    await cart.populate('items.productId');
-
-    res.status(200).json({
+    res.json({
       message: 'Producto eliminado del carrito',
       statusCode: 200,
-      data: cart
+      data: { cart }
     });
   } catch (error) {
     next(error);
@@ -207,30 +141,147 @@ const removeFromCart = async (req, res, next) => {
 };
 
 /**
- * Vaciar carrito
+ * Limpiar carrito
  * DELETE /api/cart
  */
 const clearCart = async (req, res, next) => {
   try {
-    const tenantId = req.tenantId;
-    const userId = req.user.userId;
+    const userId = req.user?._id;
+    const sessionId = req.sessionID || req.headers['x-session-id'];
 
-    const cart = await Cart.findOne({ tenantId, userId });
+    const filter = userId ? { user: userId } : { sessionId };
+    const cart = await Cart.findOne(filter);
 
     if (!cart) {
-      return res.status(404).json({
-        message: 'Carrito no encontrado',
-        statusCode: 404
+      throw new NotFoundError('Carrito no encontrado');
+    }
+
+    await cart.clear();
+
+    res.json({
+      message: 'Carrito vaciado exitosamente',
+      statusCode: 200,
+      data: { cart }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Aplicar cupón de descuento
+ * POST /api/cart/coupon
+ */
+const applyCoupon = async (req, res, next) => {
+  try {
+    const userId = req.user?._id;
+    const sessionId = req.sessionID || req.headers['x-session-id'];
+    const { couponCode } = req.body;
+
+    const filter = userId ? { user: userId } : { sessionId };
+    const cart = await Cart.findOne(filter);
+
+    if (!cart) {
+      throw new NotFoundError('Carrito no encontrado');
+    }
+
+    await cart.applyCoupon(couponCode);
+    await cart.populate('items.product', 'name image pricing inventory');
+
+    res.json({
+      message: 'Cupón aplicado exitosamente',
+      statusCode: 200,
+      data: { cart }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Remover cupón
+ * DELETE /api/cart/coupon
+ */
+const removeCoupon = async (req, res, next) => {
+  try {
+    const userId = req.user?._id;
+    const sessionId = req.sessionID || req.headers['x-session-id'];
+
+    const filter = userId ? { user: userId } : { sessionId };
+    const cart = await Cart.findOne(filter);
+
+    if (!cart) {
+      throw new NotFoundError('Carrito no encontrado');
+    }
+
+    await cart.removeCoupon();
+    await cart.populate('items.product', 'name image pricing inventory');
+
+    res.json({
+      message: 'Cupón removido exitosamente',
+      statusCode: 200,
+      data: { cart }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Migrar carrito de sesión a usuario
+ * POST /api/cart/merge
+ */
+const mergeCart = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+      throw new ValidationError('sessionId es requerido');
+    }
+
+    // Buscar carrito de sesión
+    const sessionCart = await Cart.findOne({ sessionId });
+    if (!sessionCart || sessionCart.items.length === 0) {
+      return res.json({
+        message: 'No hay carrito de sesión para migrar',
+        statusCode: 200,
+        data: { cart: null }
       });
     }
 
-    cart.items = [];
-    await cart.save();
+    // Buscar o crear carrito de usuario
+    let userCart = await Cart.findOne({ user: userId });
+    if (!userCart) {
+      userCart = await Cart.create({ user: userId });
+    }
 
-    res.status(200).json({
-      message: 'Carrito vaciado',
+    // Migrar items
+    for (const item of sessionCart.items) {
+      try {
+        await userCart.addItem({
+          product: item.product,
+          productId: item.productId,
+          name: item.name,
+          image: item.image,
+          price: item.price,
+          quantity: item.quantity
+        });
+      } catch (error) {
+        // Continuar si hay error en un item específico
+        console.error('Error migrando item:', error.message);
+      }
+    }
+
+    // Eliminar carrito de sesión
+    await sessionCart.deleteOne();
+
+    await userCart.populate('items.product', 'name image pricing inventory');
+
+    res.json({
+      message: 'Carrito migrado exitosamente',
       statusCode: 200,
-      data: cart
+      data: { cart: userCart }
     });
   } catch (error) {
     next(error);
@@ -239,8 +290,11 @@ const clearCart = async (req, res, next) => {
 
 module.exports = {
   getCart,
-  addToCart,
-  updateCartItem,
-  removeFromCart,
-  clearCart
+  addItem,
+  updateItemQuantity,
+  removeItem,
+  clearCart,
+  applyCoupon,
+  removeCoupon,
+  mergeCart
 };
