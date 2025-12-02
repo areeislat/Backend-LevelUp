@@ -68,18 +68,36 @@ const swaggerOptions = {
         Cart: {
           type: 'object',
           properties: {
-            id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-            userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            user: { type: 'string', example: '507f1f77bcf86cd799439011' },
             items: {
               type: 'array',
               items: {
                 type: 'object',
                 properties: {
-                  productId: { type: 'string', example: '507f1f77bcf86cd799439011' },
-                  quantity: { type: 'number', example: 2 }
+                  product: { 
+                    type: 'object',
+                    properties: {
+                      _id: { type: 'string' },
+                      name: { type: 'string' },
+                      price: { type: 'number' },
+                      image: { type: 'string' }
+                    }
+                  },
+                  quantity: { type: 'number', example: 2 },
+                  price: { type: 'number', example: 19990 }
                 }
               }
             },
+            subtotal: { type: 'number', example: 39980 },
+            discount: { type: 'number', example: 0 },
+            total: { type: 'number', example: 39980 },
+            status: { 
+              type: 'string', 
+              enum: ['active', 'completed', 'abandoned'],
+              example: 'active'
+            },
+            couponCode: { type: 'string', nullable: true },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' }
           }
@@ -87,27 +105,153 @@ const swaggerOptions = {
         Order: {
           type: 'object',
           properties: {
-            id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-            userId: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            user: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            orderNumber: { type: 'string', example: 'ORD-1701542400000' },
             items: {
               type: 'array',
               items: {
                 type: 'object',
                 properties: {
-                  productId: { type: 'string' },
-                  quantity: { type: 'number' },
-                  price: { type: 'number' }
+                  product: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                  name: { type: 'string', example: 'Producto Demo' },
+                  quantity: { type: 'number', example: 2 },
+                  price: { type: 'number', example: 19990 },
+                  subtotal: { type: 'number', example: 39980 }
                 }
               }
             },
-            total: { type: 'number', example: 2599.98 },
+            subtotal: { type: 'number', example: 39980 },
+            shipping: { type: 'number', example: 5000 },
+            discount: { type: 'number', example: 0 },
+            total: { type: 'number', example: 44980 },
             status: { 
               type: 'string', 
-              enum: ['pending', 'paid', 'shipped', 'cancelled'],
+              enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'],
               example: 'pending' 
+            },
+            paymentStatus: {
+              type: 'string',
+              enum: ['pending', 'paid', 'failed', 'refunded'],
+              example: 'pending'
+            },
+            paymentMethod: { type: 'string', example: 'credit_card' },
+            shippingAddress: {
+              type: 'object',
+              properties: {
+                direccion: { type: 'string', example: 'Av. Principal 123' },
+                comuna: { type: 'string', example: 'Santiago' },
+                region: { type: 'string', example: 'Metropolitana' },
+                codigoPostal: { type: 'string', example: '8320000' }
+              }
+            },
+            trackingNumber: { type: 'string', nullable: true },
+            notes: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        Payment: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            order: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            user: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            amount: { type: 'number', example: 44980 },
+            method: { 
+              type: 'string', 
+              enum: ['credit_card', 'debit_card', 'webpay', 'mercadopago', 'transferencia'],
+              example: 'credit_card'
+            },
+            gateway: { type: 'string', example: 'webpay' },
+            status: {
+              type: 'string',
+              enum: ['pending', 'processing', 'completed', 'failed', 'refunded'],
+              example: 'completed'
+            },
+            transactionId: { type: 'string', example: 'TXN-1701542400000' },
+            gatewayResponse: { type: 'object' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        LoyaltyAccount: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            user: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            balance: { type: 'number', example: 1500 },
+            totalEarned: { type: 'number', example: 2000 },
+            totalRedeemed: { type: 'number', example: 500 },
+            tier: {
+              type: 'string',
+              enum: ['bronze', 'silver', 'gold', 'platinum'],
+              example: 'silver'
             },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        PointsTransaction: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            account: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            type: {
+              type: 'string',
+              enum: ['earn', 'redeem', 'expire', 'adjustment'],
+              example: 'earn'
+            },
+            points: { type: 'number', example: 100 },
+            reason: { type: 'string', example: 'Compra de orden ORD-123' },
+            order: { type: 'string', nullable: true },
+            reward: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        Reward: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            name: { type: 'string', example: 'Descuento 10%' },
+            description: { type: 'string', example: 'Descuento del 10% en tu próxima compra' },
+            pointsCost: { type: 'number', example: 500 },
+            value: { type: 'number', example: 5000 },
+            category: {
+              type: 'string',
+              enum: ['discount', 'gift', 'shipping'],
+              example: 'discount'
+            },
+            isActive: { type: 'boolean', example: true },
+            stock: { type: 'number', example: 100, nullable: true },
+            expiryDate: { type: 'string', format: 'date-time', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        RedeemedReward: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            user: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            reward: { 
+              type: 'object',
+              properties: {
+                _id: { type: 'string' },
+                name: { type: 'string' },
+                description: { type: 'string' }
+              }
+            },
+            pointsSpent: { type: 'number', example: 500 },
+            couponCode: { type: 'string', example: 'LOYALTY-ABC123' },
+            status: {
+              type: 'string',
+              enum: ['active', 'used', 'expired'],
+              example: 'active'
+            },
+            expiresAt: { type: 'string', format: 'date-time' },
+            usedAt: { type: 'string', format: 'date-time', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' }
           }
         },
         Error: {
