@@ -1,29 +1,35 @@
-# E-Commerce Backend Multi-Tenant
+# E-Commerce Backend API
 
-Backend robusto y escalable para un e-commerce multi-tenant construido con Node.js, Express y MongoDB.
+Backend completo y escalable para e-commerce construido con Node.js, Express, MongoDB Atlas y Cloudinary.
 
 ## 🚀 Características
 
-- **Multi-tenancy**: Base de datos compartida con aislamiento por `tenantId`
 - **Autenticación JWT**: Sistema seguro con email y contraseña hasheada
-- **Control de acceso**: Roles de usuario (admin, customer)
+- **Control de acceso**: Roles de usuario (admin, user)
+- **Gestión de productos**: CRUD completo con imágenes en Cloudinary
+- **Gestión de categorías**: Organización por categorías
+- **Control de stock**: Reserva, liberación y ajuste de inventario
 - **Carrito persistente**: Gestión de carrito por usuario en base de datos
 - **Gestión de órdenes**: Sistema completo de pedidos con tracking
+- **Sistema de lealtad**: Puntos y recompensas
 - **Arquitectura limpia**: Separación en capas (modelos, controladores, rutas, middlewares)
 - **Manejo de errores centralizado**: Respuestas consistentes y claras
-- **Validación de datos**: Validación robusta con Joi
+- **Documentación Swagger**: API docs en `/api-docs`
 - **Seguridad**: CORS, Helmet, Rate Limiting, bcrypt
 
 ## 📖 Documentación Adicional
 
-- **[QUICKSTART.md](./QUICKSTART.md)** - Guía de inicio rápido (¡Empieza aquí!)
-- **[TESTING.md](./TESTING.md)** - Guía completa de pruebas funcionales
-- **[GITFLOW.md](./GITFLOW.md)** - Workflow de Git y convenciones
+- **[PRUEBAS_API.md](./PRUEBAS_API.md)** - Guía completa de pruebas de API con ejemplos
+- **[QUICKSTART.md](./QUICKSTART.md)** - Guía de inicio rápido
+- **[TESTING.md](./TESTING.md)** - Guía de pruebas funcionales
+- **[API_EXAMPLES.md](./API-EXAMPLES.md)** - Ejemplos de uso de la API
+- **[Swagger Docs](http://localhost:3000/api-docs)** - Documentación interactiva (cuando el servidor esté corriendo)
 
 ## 📋 Requisitos Previos
 
-- Node.js >= 14.x
-- MongoDB >= 4.x
+- Node.js >= 18.x
+- MongoDB Atlas (cuenta gratuita)
+- Cloudinary (cuenta gratuita)
 - npm o yarn
 
 ## 🔧 Instalación
@@ -48,21 +54,30 @@ Crea un archivo `.env` en la raíz del proyecto:
 PORT=3000
 NODE_ENV=development
 
-# MongoDB Configuration
-MONGODB_URI=mongodb://localhost:27017/ecommerce-multitenant
+# MongoDB Atlas Configuration
+MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/ecommerce?retryWrites=true&w=majority
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 JWT_EXPIRES_IN=7d
 
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
 # CORS Configuration
 CORS_ORIGIN=http://localhost:3001
 ```
 
-4. **Iniciar MongoDB**
+4. **Insertar datos iniciales** (Opcional)
+
 ```bash
-# Si usas MongoDB local
-mongod
+# Insertar categorías
+node insert-categories.js
+
+# Insertar productos
+node insert-products.js
 ```
 
 5. **Iniciar el servidor**
@@ -82,46 +97,66 @@ El servidor estará disponible en `http://localhost:3000`
 eCommerceBackend/
 ├── src/
 │   ├── config/           # Configuración de la aplicación
-│   │   ├── database.js   # Conexión a MongoDB
-│   │   └── env.js        # Variables de entorno
+│   │   ├── database.js   # Conexión a MongoDB Atlas
+│   │   ├── env.js        # Variables de entorno
+│   │   ├── swagger.js    # Configuración de Swagger
+│   │   └── cloudinary.js # Configuración de Cloudinary
 │   │
 │   ├── models/           # Modelos de Mongoose
-│   │   ├── Tenant.js     # Modelo de Tenant
-│   │   ├── User.js       # Modelo de Usuario
-│   │   ├── Product.js    # Modelo de Producto
-│   │   ├── Cart.js       # Modelo de Carrito
-│   │   └── Order.js      # Modelo de Orden
+│   │   ├── index.js      # Exportación de modelos
+│   │   ├── auth/         # Modelos de autenticación
+│   │   │   ├── User.js
+│   │   │   └── Session.js
+│   │   ├── catalog/      # Modelos de catálogo
+│   │   │   ├── Category.js
+│   │   │   ├── Product.js
+│   │   │   └── Review.js
+│   │   ├── orders/       # Modelos de órdenes
+│   │   │   ├── Cart.js
+│   │   │   ├── Order.js
+│   │   │   └── Payment.js
+│   │   ├── loyalty/      # Sistema de lealtad
+│   │   │   ├── LoyaltyAccount.js
+│   │   │   ├── PointsTransaction.js
+│   │   │   ├── Reward.js
+│   │   │   └── RedeemedReward.js
+│   │   └── support/      # Soporte
+│   │       ├── Ticket.js
+│   │       └── Notification.js
 │   │
 │   ├── controllers/      # Controladores (lógica de negocio)
-│   │   ├── tenantController.js
 │   │   ├── authController.js
 │   │   ├── userController.js
 │   │   ├── productController.js
+│   │   ├── categoryController.js
 │   │   ├── cartController.js
-│   │   └── orderController.js
+│   │   ├── orderController.js
+│   │   └── ...
 │   │
 │   ├── routes/           # Definición de rutas
-│   │   ├── tenantRoutes.js
 │   │   ├── authRoutes.js
 │   │   ├── userRoutes.js
 │   │   ├── productRoutes.js
-│   │   ├── cartRoutes.js
-│   │   └── orderRoutes.js
+│   │   ├── categoryRoutes.js
+│   │   └── ...
 │   │
 │   ├── middlewares/      # Middlewares personalizados
-│   │   ├── auth.js       # Autenticación y autorización JWT
-│   │   ├── tenant.js     # Extracción y validación de tenant
-│   │   └── errorHandler.js # Manejo centralizado de errores
+│   │   ├── authMiddleware.js    # Autenticación JWT
+│   │   ├── errorHandler.js      # Manejo de errores
+│   │   └── uploadImage.js       # Upload a Cloudinary
 │   │
 │   ├── utils/            # Utilidades
 │   │   ├── jwt.js        # Funciones para JWT
-│   │   ├── validators.js # Validadores con Joi
-│   │   └── errors.js     # Clases de errores personalizadas
+│   │   ├── validators.js # Validadores
+│   │   └── errors.js     # Errores personalizados
 │   │
-│   └── server.js         # Punto de entrada de la aplicación
+│   └── server.js         # Punto de entrada
 │
+├── insert-categories.js  # Script para insertar categorías
+├── insert-products.js    # Script para insertar productos
 ├── .gitignore
 ├── package.json
+├── PRUEBAS_API.md       # Guía de pruebas
 └── README.md
 ```
 
@@ -129,222 +164,227 @@ eCommerceBackend/
 
 El sistema utiliza JWT (JSON Web Tokens) para la autenticación. Todas las rutas protegidas requieren:
 
-1. **Header de Autenticación**:
+**Header de Autenticación**:
 ```
 Authorization: Bearer <token>
 ```
 
-2. **Header de Tenant** (en la mayoría de rutas):
-```
-x-tenant-id: <tenant_id>
-```
-
 ### Flujo de Autenticación
 
-1. Crear un tenant (si no existe)
-2. Registrar un usuario con el `x-tenant-id`
-3. Hacer login para obtener el token JWT
-4. Usar el token en las peticiones subsecuentes
+1. Registrar un usuario: `POST /api/auth/register`
+2. Hacer login para obtener el token JWT: `POST /api/auth/login`
+3. Usar el token en las peticiones subsecuentes
+
+### Endpoints de Autenticación
+
+- `POST /api/auth/register` - Registrar nuevo usuario
+- `POST /api/auth/login` - Iniciar sesión
+- `GET /api/auth/me` - Obtener perfil actual
+- `PUT /api/auth/profile` - Actualizar perfil
+- `POST /api/auth/logout` - Cerrar sesión
 
 ## 📚 API Endpoints
 
 ### Health Check
-
 ```
 GET /health - Verificar estado del servidor
 ```
 
-### Tenants
-
+### Documentación Swagger
 ```
-POST   /api/tenants          - Crear un tenant
-GET    /api/tenants          - Obtener todos los tenants
-GET    /api/tenants/:id      - Obtener un tenant por ID
-PUT    /api/tenants/:id      - Actualizar un tenant
-DELETE /api/tenants/:id      - Desactivar un tenant
+GET /api-docs - Documentación interactiva de la API
 ```
 
 ### Autenticación
-
 ```
 POST   /api/auth/register    - Registrar nuevo usuario
 POST   /api/auth/login       - Iniciar sesión
-GET    /api/auth/profile     - Obtener perfil (requiere auth)
-PUT    /api/auth/profile     - Actualizar perfil (requiere auth)
+GET    /api/auth/me          - Obtener perfil actual
+PUT    /api/auth/profile     - Actualizar perfil
+POST   /api/auth/logout      - Cerrar sesión
 ```
 
 ### Usuarios (Admin only)
-
 ```
 GET    /api/users            - Obtener todos los usuarios
 GET    /api/users/:id        - Obtener un usuario por ID
-PUT    /api/users/:id        - Actualizar un usuario
-DELETE /api/users/:id        - Desactivar un usuario
+POST   /api/users            - Crear usuario
+PUT    /api/users/:id        - Actualizar usuario
+DELETE /api/users/:id        - Eliminar usuario
+```
+
+### Categorías
+```
+GET    /api/categories       - Obtener todas las categorías
+GET    /api/categories/:id   - Obtener categoría por ID
+POST   /api/categories       - Crear categoría (admin)
+PUT    /api/categories/:id   - Actualizar categoría (admin)
+DELETE /api/categories/:id   - Eliminar categoría (admin)
 ```
 
 ### Productos
-
 ```
-GET    /api/products                - Obtener todos los productos
-GET    /api/products/categories     - Obtener categorías únicas
-GET    /api/products/slug/:slug     - Obtener producto por slug
-GET    /api/products/:id            - Obtener producto por ID
-POST   /api/products                - Crear producto (admin)
-PUT    /api/products/:id            - Actualizar producto (admin)
-DELETE /api/products/:id            - Eliminar producto (admin)
+GET    /api/products                    - Obtener todos los productos
+GET    /api/products/:idOrSlug          - Obtener producto por ID/slug/productId
+POST   /api/products                    - Crear producto (admin)
+PUT    /api/products/:id                - Actualizar producto (admin)
+DELETE /api/products/:id                - Eliminar producto (admin)
+PATCH  /api/products/:id/stock          - Actualizar stock (admin)
+POST   /api/products/:id/reserve        - Reservar stock (admin)
+POST   /api/products/:id/release        - Liberar stock (admin)
+POST   /api/products/upload-image       - Subir imagen a Cloudinary (admin)
 ```
 
 ### Carrito
-
 ```
-GET    /api/cart                    - Obtener carrito del usuario
-POST   /api/cart/items              - Añadir producto al carrito
-PUT    /api/cart/items/:productId   - Actualizar cantidad
-DELETE /api/cart/items/:productId   - Eliminar producto del carrito
-DELETE /api/cart                    - Vaciar carrito
+GET    /api/cart                        - Obtener carrito del usuario
+POST   /api/cart/items                  - Añadir producto al carrito
+PUT    /api/cart/items/:productId       - Actualizar cantidad
+DELETE /api/cart/items/:productId       - Eliminar producto del carrito
+DELETE /api/cart                        - Vaciar carrito
 ```
 
 ### Órdenes
-
 ```
-POST   /api/orders                  - Crear orden desde carrito
-GET    /api/orders/my-orders        - Obtener mis órdenes
-GET    /api/orders                  - Obtener todas las órdenes (admin)
-GET    /api/orders/:id              - Obtener orden por ID
-PUT    /api/orders/:id/status       - Actualizar estado (admin)
-POST   /api/orders/:id/cancel       - Cancelar orden
+POST   /api/orders                      - Crear orden desde carrito
+GET    /api/orders/my-orders            - Obtener mis órdenes
+GET    /api/orders                      - Obtener todas las órdenes (admin)
+GET    /api/orders/:id                  - Obtener orden por ID
+PUT    /api/orders/:id/status           - Actualizar estado (admin)
+POST   /api/orders/:id/cancel           - Cancelar orden
+```
+
+### Loyalty (Sistema de Lealtad)
+```
+GET    /api/loyalty/account             - Obtener cuenta de puntos
+GET    /api/loyalty/rewards             - Obtener recompensas disponibles
+POST   /api/loyalty/redeem/:rewardId    - Canjear recompensa
+GET    /api/loyalty/history             - Historial de transacciones
 ```
 
 ## 🧪 Ejemplos de Uso
 
-### 1. Crear un Tenant
+Ver [PRUEBAS_API.md](./PRUEBAS_API.md) para ejemplos completos y guía de pruebas paso a paso.
+
+### Registro y Login
 
 ```bash
-curl -X POST http://localhost:3000/api/tenants \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Mi Tienda",
-    "slug": "mi-tienda",
-    "email": "admin@mitienda.com",
-    "domain": "mitienda.com"
-  }'
+# Registrar usuario
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Admin Principal",
+  "email": "admin@tutienda.com",
+  "password": "Admin123!",
+  "role": "admin"
+}
+
+# Login
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@tutienda.com",
+  "password": "Admin123!"
+}
 ```
 
-### 2. Registrar un Usuario
+### Crear Producto
 
 ```bash
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -H "x-tenant-id: <TENANT_ID>" \
-  -d '{
-    "email": "usuario@example.com",
-    "password": "password123",
-    "firstName": "Juan",
-    "lastName": "Pérez",
-    "role": "customer"
-  }'
+POST http://localhost:3000/api/products
+Authorization: Bearer <TOKEN>
+Content-Type: application/json
+
+{
+  "productId": "SKU-001",
+  "name": "Producto Demo",
+  "description": "Descripción del producto",
+  "brand": "Mi Marca",
+  "price": 19990,
+  "oldPrice": 24990,
+  "image": "/productos/demo.jpg",
+  "images": ["/productos/demo.jpg"],
+  "category": "juegos",
+  "stock": {
+    "current": 50,
+    "minLevel": 5,
+    "maxLevel": 100
+  }
+}
 ```
 
-### 3. Login
+### Subir Imagen a Cloudinary
 
 ```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -H "x-tenant-id: <TENANT_ID>" \
-  -d '{
-    "email": "usuario@example.com",
-    "password": "password123"
-  }'
+POST http://localhost:3000/api/products/upload-image
+Authorization: Bearer <TOKEN>
+Content-Type: multipart/form-data
+
+# Envía un FormData con la imagen en el campo "image"
 ```
 
-### 4. Crear un Producto (Admin)
+### Insertar Datos Masivos
 
 ```bash
-curl -X POST http://localhost:3000/api/products \
-  -H "Content-Type: application/json" \
-  -H "x-tenant-id: <TENANT_ID>" \
-  -H "Authorization: Bearer <TOKEN>" \
-  -d '{
-    "name": "Producto Ejemplo",
-    "slug": "producto-ejemplo",
-    "description": "Descripción del producto",
-    "price": 99.99,
-    "category": "Electrónica",
-    "inventory": {
-      "quantity": 100
-    }
-  }'
-```
+# Insertar categorías
+node insert-categories.js
 
-### 5. Añadir al Carrito
-
-```bash
-curl -X POST http://localhost:3000/api/cart/items \
-  -H "Content-Type: application/json" \
-  -H "x-tenant-id: <TENANT_ID>" \
-  -H "Authorization: Bearer <TOKEN>" \
-  -d '{
-    "productId": "<PRODUCT_ID>",
-    "quantity": 2
-  }'
-```
-
-### 6. Crear una Orden
-
-```bash
-curl -X POST http://localhost:3000/api/orders \
-  -H "Content-Type: application/json" \
-  -H "x-tenant-id: <TENANT_ID>" \
-  -H "Authorization: Bearer <TOKEN>" \
-  -d '{
-    "paymentMethod": "credit_card",
-    "shippingAddress": {
-      "firstName": "Juan",
-      "lastName": "Pérez",
-      "street": "Calle Principal 123",
-      "city": "Ciudad",
-      "state": "Estado",
-      "zipCode": "12345",
-      "country": "México",
-      "phone": "+52 1234567890"
-    }
-  }'
+# Insertar productos
+node insert-products.js
 ```
 
 ## 🔒 Seguridad
 
-- **Contraseñas hasheadas**: Usando bcryptjs con salt
-- **JWT**: Tokens con expiración configurable
+- **Contraseñas hasheadas**: Usando bcryptjs con salt de 10 rondas
+- **JWT**: Tokens con expiración de 7 días
 - **CORS**: Configurado para orígenes específicos
 - **Helmet**: Protección de headers HTTP
 - **Rate Limiting**: Prevención de ataques de fuerza bruta
-- **Validación de entrada**: Con Joi en todas las rutas
-- **Multi-tenancy**: Aislamiento completo de datos por tenant
+- **Validación de entrada**: Con validadores personalizados
+- **Autorización basada en roles**: Admin y User con permisos diferenciados
+- **Cloudinary**: Almacenamiento seguro de imágenes con API Key/Secret
 
 ## 🎯 Roles de Usuario
 
 ### Admin
 - Gestionar usuarios
-- CRUD completo de productos
+- CRUD completo de productos, categorías y recompensas
 - Ver todas las órdenes
 - Actualizar estado de órdenes
+- Subir imágenes a Cloudinary
+- Gestionar stock y reservas
 
-### Customer
-- Ver productos
+### User (Customer)
+- Ver productos y categorías
 - Gestionar carrito
-- Crear órdenes
+- Crear y cancelar órdenes
 - Ver sus propias órdenes
+- Actualizar perfil y direcciones
+- Sistema de loyalty (ganar y canjear puntos)
 
 ## 📊 Modelos de Datos
 
-### Tenant
+### User
 ```javascript
 {
   name: String,
-  slug: String (unique),
   email: String (unique),
-  domain: String,
-  status: Enum ['active', 'inactive', 'suspended'],
+  password: String (hasheado),
+  role: Enum ['admin', 'user'],
+  addresses: [{
+    alias: String,
+    direccion: String,
+    comuna: String,
+    region: String,
+    codigoPostal: String,
+    isDefault: Boolean
+  }],
+  preferences: {
+    notifications: Boolean,
+    newsletter: Boolean
+  },
   settings: {
     currency: String,
     timezone: String,
@@ -357,78 +397,133 @@ curl -X POST http://localhost:3000/api/orders \
 ```javascript
 {
   tenantId: ObjectId,
-  email: String,
-  password: String (hashed),
-  firstName: String,
-  lastName: String,
-  role: Enum ['admin', 'customer'],
-  phone: String,
-  address: Object,
-  status: Enum ['active', 'inactive', 'suspended']
+  isActive: Boolean,
+  createdAt: Date,
+  updatedAt: Date
 }
 ```
 
 ### Product
 ```javascript
 {
-  tenantId: ObjectId,
+  productId: String (SKU único),
   name: String,
-  slug: String,
+  slug: String (auto-generado),
   description: String,
+  brand: String,
   price: Number,
+  oldPrice: Number,
+  image: String (URL),
+  images: [String],
   category: String,
-  inventory: {
-    quantity: Number,
-    trackInventory: Boolean
+  isNew: Boolean,
+  isPromo: Boolean,
+  isActive: Boolean,
+  stock: {
+    current: Number,
+    reserved: Number,
+    minLevel: Number,
+    maxLevel: Number,
+    lastUpdated: Date
   },
-  status: Enum ['active', 'draft', 'archived']
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+### Category
+```javascript
+{
+  name: String (unique),
+  slug: String (auto-generado),
+  description: String,
+  isActive: Boolean,
+  createdAt: Date,
+  updatedAt: Date
 }
 ```
 
 ### Cart
 ```javascript
 {
-  tenantId: ObjectId,
-  user: ObjectId,
+  user: ObjectId (ref: User),
   items: [{
-    product: ObjectId,
+    product: ObjectId (ref: Product),
     quantity: Number,
     price: Number
   }],
-  status: Enum ['active', 'completed', 'abandoned']
+  status: Enum ['active', 'completed', 'abandoned'],
+  createdAt: Date,
+  updatedAt: Date
 }
 ```
 
 ### Order
 ```javascript
 {
-  tenantId: ObjectId,
-  orderNumber: String (auto-generated),
-  user: ObjectId,
-  items: Array,
+  user: ObjectId (ref: User),
+  orderNumber: String (auto-generado),
+  items: [{
+    product: ObjectId (ref: Product),
+    quantity: Number,
+    price: Number
+  }],
   subtotal: Number,
-  tax: Number,
   shipping: Number,
+  discount: Number,
   total: Number,
   status: Enum ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
   paymentStatus: Enum ['pending', 'paid', 'failed', 'refunded'],
   paymentMethod: String,
-  shippingAddress: Object
+  shippingAddress: Object,
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+### LoyaltyAccount
+```javascript
+{
+  user: ObjectId (ref: User),
+  balance: Number,
+  totalEarned: Number,
+  totalRedeemed: Number,
+  tier: Enum ['bronze', 'silver', 'gold', 'platinum'],
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+### Reward
+```javascript
+{
+  name: String,
+  description: String,
+  pointsCost: Number,
+  value: Number,
+  category: Enum ['discount', 'gift', 'shipping'],
+  isActive: Boolean,
+  stock: Number,
+  expiryDate: Date,
+  createdAt: Date,
+  updatedAt: Date
 }
 ```
 
 ## 🧰 Tecnologías Utilizadas
 
-- **Node.js**: Entorno de ejecución
-- **Express**: Framework web
-- **MongoDB**: Base de datos NoSQL
-- **Mongoose**: ODM para MongoDB
-- **JWT**: Autenticación con tokens
-- **Bcrypt**: Hashing de contraseñas
-- **Joi**: Validación de datos
-- **Helmet**: Seguridad HTTP
-- **CORS**: Control de acceso
+- **Node.js v24.11.1**: Entorno de ejecución
+- **Express 4.x**: Framework web minimalista
+- **MongoDB Atlas**: Base de datos NoSQL en la nube
+- **Mongoose 8.x**: ODM para MongoDB con validación y middleware
+- **JWT (jsonwebtoken)**: Autenticación basada en tokens
+- **Bcryptjs**: Hashing de contraseñas con salt
+- **Cloudinary**: Servicio de almacenamiento y CDN de imágenes
+- **Helmet**: Seguridad de headers HTTP
+- **CORS**: Control de acceso entre orígenes
 - **Express Rate Limit**: Limitación de peticiones
+- **Slugify**: Generación de slugs URL-friendly
+- **Swagger UI Express**: Documentación interactiva de API
 
 ## 🚦 Manejo de Errores
 
@@ -438,42 +533,47 @@ El sistema incluye manejo centralizado de errores con respuestas consistentes:
 {
   success: false,
   message: "Descripción del error",
-  errors: [] // Array de errores (opcional)
+  error: {} // Detalles adicionales (opcional)
 }
 ```
 
 Códigos de estado HTTP:
-- `200`: Éxito
-- `201`: Creado
-- `400`: Error de validación
-- `401`: No autorizado
-- `403`: Prohibido
-- `404`: No encontrado
-- `409`: Conflicto
-- `500`: Error del servidor
+- `200`: Éxito en operación
+- `201`: Recurso creado exitosamente
+- `400`: Error de validación o petición incorrecta
+- `401`: No autorizado (sin token o token inválido)
+- `403`: Prohibido (sin permisos suficientes)
+- `404`: Recurso no encontrado
+- `409`: Conflicto (ej: email duplicado)
+- `500`: Error interno del servidor
 
-## 📝 Mejores Prácticas
+## 📝 Mejores Prácticas Implementadas
 
-- ✅ Separación de responsabilidades
+- ✅ Separación de responsabilidades (MVC)
 - ✅ Código modular y reutilizable
-- ✅ Validación de entrada
-- ✅ Manejo de errores robusto
-- ✅ Índices en base de datos para optimización
-- ✅ Soft delete (desactivación en lugar de eliminación)
-- ✅ Paginación en listados
-- ✅ Aislamiento de datos por tenant
-- ✅ Seguridad en todas las capas
+- ✅ Validación de entrada con validadores personalizados
+- ✅ Manejo de errores robusto con middleware centralizado
+- ✅ Índices únicos en MongoDB para emails y slugs
+- ✅ Soft delete (isActive: false en lugar de eliminación física)
+- ✅ Generación automática de slugs SEO-friendly
+- ✅ JWT con expiración de 7 días
+- ✅ Sistema de stock con reservas y niveles mínimos/máximos
+- ✅ Documentación Swagger completa
+- ✅ Scripts de inserción masiva de datos
+- ✅ Integración con Cloudinary para imágenes
 
 ## 🔄 Próximas Mejoras
 
 - [ ] Tests unitarios e integración con Jest
-- [ ] Documentación con Swagger/OpenAPI
-- [ ] Logging avanzado con Winston
-- [ ] Cache con Redis
-- [ ] Subida de imágenes con AWS S3
-- [ ] Webhooks para eventos
-- [ ] Notificaciones por email
-- [ ] Métricas y monitoreo
+- [ ] Logging avanzado con Winston o Pino
+- [ ] Cache con Redis para consultas frecuentes
+- [ ] Procesamiento de pagos con Stripe/MercadoPago
+- [ ] Webhooks para notificaciones de órdenes
+- [ ] Sistema de envío de emails con Nodemailer
+- [ ] Panel de métricas y analytics
+- [ ] Sistema de reviews y ratings para productos
+- [ ] Búsqueda avanzada con filtros múltiples
+- [ ] Internacionalización (i18n)
 
 ## 📄 Licencia
 
@@ -481,5 +581,22 @@ MIT
 
 ## 👨‍💻 Autor
 
-Desarrollado siguiendo las mejores prácticas de Node.js y arquitectura limpia.
+Backend API desarrollada siguiendo las mejores prácticas de Node.js y arquitectura limpia para eCommerce.
+
+## 🆘 Solución de Problemas
+
+### Error: Invalid Signature (Cloudinary)
+- Verifica que `CLOUDINARY_API_SECRET` en `.env` sea exacto desde el dashboard
+- No debe tener espacios ni caracteres extra
+- Reinicia el servidor después de cambiar `.env`
+
+### Productos retornan vacío
+- Verifica que las categorías existan primero
+- Ejecuta `node insert-categories.js` antes de `insert-products.js`
+- Verifica conexión a MongoDB Atlas
+
+### Error de autenticación
+- Asegúrate de incluir header: `Authorization: Bearer <TOKEN>`
+- Verifica que el token no haya expirado (7 días)
+- Para admin, asegúrate de que `role: "admin"` en el usuario
 

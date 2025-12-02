@@ -25,7 +25,7 @@ const register = async (req, res, next) => {
       nombre: name,
       email,
       password,
-      role: role || 'admin',
+      role: role || 'user',
       isActive: true
     });
 
