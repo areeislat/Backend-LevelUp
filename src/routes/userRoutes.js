@@ -87,13 +87,10 @@ router.get('/:id', authenticateToken, requireAdmin, userController.getUserById);
  *           schema:
  *             type: object
  *             required:
- *               - tenantId
  *               - name
  *               - email
  *               - password
  *             properties:
- *               tenantId:
- *                 type: string
  *               name:
  *                 type: string
  *               email:

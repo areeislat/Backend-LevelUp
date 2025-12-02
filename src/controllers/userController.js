@@ -72,18 +72,18 @@ const getUserById = async (req, res, next) => {
  */
 const createUser = async (req, res, next) => {
   try {
-    const { tenantId, name, email, password, role } = req.body;
+    const { name, email, password, role } = req.body;
 
-    // Validar campos requeridos
-    if (!tenantId || !name || !email || !password) {
+    // Validar campos
+    if (!name || !email || !password) {
       return res.status(400).json({
-        message: 'Faltan campos requeridos: tenantId, name, email, password',
+        message: 'Faltan campos requeridos: name, email, password',
         statusCode: 400
       });
     }
 
-    // Verificar si el usuario ya existe
-    const existingUser = await User.findOne({ tenantId, email });
+    // Verificar si el email ya existe
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(409).json({
         message: 'El email ya está registrado en este tenant',

@@ -32,8 +32,8 @@ const authenticate = (req, res, next) => {
     const decoded = jwt.verify(token, config.JWT_SECRET);
 
     // 5. Extraer datos del usuario del token
-    // El token debe contener: userId, tenantId, role, email
-    if (!decoded.userId || !decoded.tenantId || !decoded.role || !decoded.email) {
+    // El token debe contener: userId, role, email
+    if (!decoded.userId || !decoded.role || !decoded.email) {
       return res.status(401).json({
         message: 'Token inválido: faltan datos del usuario',
         statusCode: 401
@@ -43,8 +43,7 @@ const authenticate = (req, res, next) => {
     // 6. Guardar información del usuario en req.user
     req.user = {
       _id: decoded.userId,
-      userId: decoded.userId, // Mantener compatibilidad
-      tenantId: decoded.tenantId,
+      userId: decoded.userId,
       role: decoded.role,
       email: decoded.email
     };

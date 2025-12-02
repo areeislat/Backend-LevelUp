@@ -67,7 +67,7 @@ const RedeemedRewardSchema = new mongoose.Schema({
 });
 
 // Índices
-RedeemedRewardSchema.index({ couponCode: 1 });
+// couponCode ya tiene índice por unique: true
 RedeemedRewardSchema.index({ user: 1, status: 1 });
 RedeemedRewardSchema.index({ expiresAt: 1 });
 

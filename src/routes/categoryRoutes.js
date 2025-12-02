@@ -53,6 +53,7 @@ router.get('/', getCategories);
  */
 router.get('/:idOrSlug', getCategoryById);
 
+
 /**
  * @swagger
  * /api/categories:
@@ -73,19 +74,56 @@ router.get('/:idOrSlug', getCategoryById);
  *             properties:
  *               name:
  *                 type: string
+ *                 example: Ropa
  *               slug:
  *                 type: string
+ *                 example: ropa
  *               description:
  *                 type: string
+ *                 example: "Categoría de prendas de vestir y accesorios."
  *               icon:
  *                 type: string
+ *                 example: "tshirt"
  *     responses:
  *       201:
  *         description: Categoría creada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Categoría creada exitosamente
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     category:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                           example: 6567e1c2f1a2b3c4d5e6f7a8
+ *                         name:
+ *                           type: string
+ *                           example: Ropa
+ *                         slug:
+ *                           type: string
+ *                           example: ropa
+ *                         description:
+ *                           type: string
+ *                           example: "Categoría de prendas de vestir y accesorios."
+ *                         icon:
+ *                           type: string
+ *                           example: "tshirt"
  *       401:
  *         description: No autorizado
  */
 router.post('/', authenticate, requireRole('admin'), createCategory);
+
 
 /**
  * @swagger
@@ -101,9 +139,61 @@ router.post('/', authenticate, requireRole('admin'), createCategory);
  *         required: true
  *         schema:
  *           type: string
+ *         description: ID de la categoría
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Ropa actualizada
+ *               slug:
+ *                 type: string
+ *                 example: ropa-actualizada
+ *               description:
+ *                 type: string
+ *                 example: "Nueva descripción de la categoría."
+ *               icon:
+ *                 type: string
+ *                 example: "tshirt"
  *     responses:
  *       200:
  *         description: Categoría actualizada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Categoría actualizada exitosamente
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     category:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                           example: 6567e1c2f1a2b3c4d5e6f7a8
+ *                         name:
+ *                           type: string
+ *                           example: Ropa actualizada
+ *                         slug:
+ *                           type: string
+ *                           example: ropa-actualizada
+ *                         description:
+ *                           type: string
+ *                           example: "Nueva descripción de la categoría."
+ *                         icon:
+ *                           type: string
+ *                           example: "tshirt"
  */
 router.put('/:id', authenticate, requireRole('admin'), updateCategory);
 

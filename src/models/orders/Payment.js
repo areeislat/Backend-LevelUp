@@ -87,7 +87,7 @@ const PaymentSchema = new mongoose.Schema({
 });
 
 // Índices
-PaymentSchema.index({ transactionId: 1 });
+// transactionId ya tiene índice por unique: true
 PaymentSchema.index({ createdAt: -1 });
 PaymentSchema.index({ status: 1, createdAt: -1 });
 

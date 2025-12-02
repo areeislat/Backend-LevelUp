@@ -133,7 +133,7 @@ const UserSchema = new mongoose.Schema({
 });
 
 // Índices
-UserSchema.index({ email: 1 });
+// email ya tiene índice por unique: true
 UserSchema.index({ role: 1 });
 UserSchema.index({ createdAt: -1 });
 

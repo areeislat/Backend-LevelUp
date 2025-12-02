@@ -4,8 +4,7 @@ const { generateToken } = require('../utils/jwt');
 // ✅ REGISTER CORREGIDO
 const register = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body; // 👈 AHORA USA "name"
-    const tenantId = req.tenantId;
+    const { name, email, password, role } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -14,7 +13,7 @@ const register = async (req, res, next) => {
       });
     }
 
-    const existingUser = await User.findOne({ tenantId, email });
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(409).json({
         message: 'El email ya está registrado en este tenant',
@@ -23,24 +22,21 @@ const register = async (req, res, next) => {
     }
 
     const user = await User.create({
-      tenantId,
-      nombre: name, // ✅ se guarda correctamente en Mongo
+      nombre: name,
       email,
       password,
-      role: role || 'user',
+      role: role || 'admin',
       isActive: true
     });
 
     const token = generateToken({
       userId: user._id,
-      tenantId: user.tenantId,
       role: user.role,
       email: user.email
     });
 
     const userResponse = {
       id: user._id,
-      tenantId: user.tenantId,
       name: user.nombre,
       email: user.email,
       role: user.role,
@@ -71,7 +67,6 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const tenantId = req.tenantId;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -80,7 +75,7 @@ const login = async (req, res, next) => {
       });
     }
 
-    const user = await User.findOne({ tenantId, email }).select('+password');
+    const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
       return res.status(401).json({
@@ -107,14 +102,12 @@ const login = async (req, res, next) => {
 
     const token = generateToken({
       userId: user._id,
-      tenantId: user.tenantId,
       role: user.role,
       email: user.email
     });
 
     const userResponse = {
       id: user._id,
-      tenantId: user.tenantId,
       name: user.nombre,
       email: user.email,
       role: user.role,
@@ -180,7 +173,6 @@ const updateProfile = async (req, res, next) => {
 
     if (email && email !== user.email) {
       const existingUser = await User.findOne({ 
-        tenantId: user.tenantId, 
         email, 
         _id: { $ne: userId } 
       });

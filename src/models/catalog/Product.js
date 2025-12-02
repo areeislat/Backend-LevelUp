@@ -171,6 +171,7 @@ const ProductSchema = new mongoose.Schema({
 });
 
 // Índices
+// slug y productId ya tienen índice por unique: true
 ProductSchema.index({ name: 'text', brand: 'text', description: 'text' });
 ProductSchema.index({ category: 1, isActive: 1 });
 ProductSchema.index({ price: 1 });

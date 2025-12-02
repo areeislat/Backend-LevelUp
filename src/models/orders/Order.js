@@ -197,7 +197,7 @@ const OrderSchema = new mongoose.Schema({
 });
 
 // Índices
-OrderSchema.index({ orderNumber: 1 });
+// orderNumber ya tiene índice por unique: true
 OrderSchema.index({ user: 1, createdAt: -1 });
 OrderSchema.index({ status: 1, createdAt: -1 });
 OrderSchema.index({ 'payment.status': 1 });

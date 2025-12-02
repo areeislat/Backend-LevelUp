@@ -10,7 +10,45 @@ const {
   reserveStock,
   releaseStock
 } = require('../controllers/productController');
+
 const { authenticate, requireRole } = require('../middlewares/authMiddleware');
+const upload = require('../middlewares/uploadImage');
+/**
+ * @swagger
+ * /api/products/upload-image:
+ *   post:
+ *     tags: [Products]
+ *     summary: Subir imagen de producto a Cloudinary
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: URL de la imagen subida
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ *                   example: https://res.cloudinary.com/tu_cloud/image/upload/v123456789/producto.jpg
+ */
+router.post('/upload-image', authenticate, requireRole('admin'), upload.single('image'), (req, res) => {
+  if (!req.file || !req.file.path) {
+    return res.status(400).json({ message: 'No se subió ninguna imagen', statusCode: 400 });
+  }
+  res.json({ url: req.file.path });
+});
 
 /**
  * @swagger
@@ -102,31 +140,127 @@ router.get('/:idOrSlug', getProductById);
  *             required:
  *               - productId
  *               - name
- *               - pricing
+ *               - price
+ *               - image
+ *               - stock
  *             properties:
  *               productId:
  *                 type: string
+ *                 example: SKU-12345
  *               name:
  *                 type: string
+ *                 example: Camiseta básica
  *               description:
  *                 type: string
- *               pricing:
+ *                 example: Camiseta 100% algodón, varios colores.
+ *               price:
+ *                 type: number
+ *                 example: 19.99
+ *               oldPrice:
+ *                 type: number
+ *                 example: 24.99
+ *               image:
+ *                 type: string
+ *                 example: https://res.cloudinary.com/tu_cloud/image/upload/v123456789/producto.jpg
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["https://res.cloudinary.com/tu_cloud/image/upload/v123456789/galeria1.jpg"]
+ *               category:
+ *                 type: string
+ *                 example: ropa
+ *               stock:
  *                 type: object
  *                 properties:
- *                   basePrice:
- *                     type: number
- *                   salePrice:
- *                     type: number
+ *                   current:
+ *                     type: integer
+ *                     example: 50
+ *                   minLevel:
+ *                     type: integer
+ *                     example: 5
+ *                   maxLevel:
+ *                     type: integer
+ *                     example: 100
+ *                 example: {"current": 50, "minLevel": 5, "maxLevel": 100}
+ *     example:
+ *       productId: SKU-12345
+ *       name: Camiseta básica
+ *       description: Camiseta 100% algodón, varios colores.
+ *       price: 19.99
+ *       oldPrice: 24.99
+ *       image: https://res.cloudinary.com/tu_cloud/image/upload/v123456789/producto.jpg
+ *       images: ["https://res.cloudinary.com/tu_cloud/image/upload/v123456789/galeria1.jpg"]
+ *       category: ropa
+ *       stock: { current: 50, minLevel: 5, maxLevel: 100 }
  *     responses:
  *       201:
  *         description: Producto creado
  */
 router.post('/', authenticate, requireRole('admin'), createProduct);
 
+
 /**
- * @route   PUT /api/products/:id
- * @desc    Actualizar producto
- * @access  Private (Admin)
+ * @swagger
+ * /api/products/{id}:
+ *   put:
+ *     tags: [Products]
+ *     summary: Actualizar producto
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del producto
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Camiseta actualizada
+ *               description:
+ *                 type: string
+ *                 example: Nueva descripción del producto.
+ *               price:
+ *                 type: number
+ *                 example: 21.99
+ *               oldPrice:
+ *                 type: number
+ *                 example: 24.99
+ *               image:
+ *                 type: string
+ *                 example: https://res.cloudinary.com/tu_cloud/image/upload/v123456789/producto.jpg
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["https://res.cloudinary.com/tu_cloud/image/upload/v123456789/galeria1.jpg"]
+ *               category:
+ *                 type: string
+ *                 example: ropa
+ *               stock:
+ *                 type: object
+ *                 properties:
+ *                   current:
+ *                     type: integer
+ *                     example: 40
+ *                   minLevel:
+ *                     type: integer
+ *                     example: 5
+ *                   maxLevel:
+ *                     type: integer
+ *                     example: 100
+ *                 example: {"current": 40, "minLevel": 5, "maxLevel": 100}
+ *     responses:
+ *       200:
+ *         description: Producto actualizado
  */
 router.put('/:id', authenticate, requireRole('admin'), updateProduct);
 
@@ -137,24 +271,122 @@ router.put('/:id', authenticate, requireRole('admin'), updateProduct);
  */
 router.delete('/:id', authenticate, requireRole('admin'), deleteProduct);
 
+
 /**
- * @route   PATCH /api/products/:id/stock
- * @desc    Actualizar stock de producto
- * @access  Private (Admin)
+ * @swagger
+ * /api/products/{id}/stock:
+ *   patch:
+ *     tags: [Products]
+ *     summary: Actualizar stock de producto
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del producto
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - quantity
+ *               - type
+ *             properties:
+ *               quantity:
+ *                 type: integer
+ *                 example: 10
+ *               type:
+ *                 type: string
+ *                 enum: [restock, sale, adjustment]
+ *                 example: restock
+ *               reason:
+ *                 type: string
+ *                 example: "Reposición de stock"
+ *               orderId:
+ *                 type: string
+ *                 example: "6567e1c2f1a2b3c4d5e6f7a8"
+ *     responses:
+ *       200:
+ *         description: Stock actualizado exitosamente
  */
 router.patch('/:id/stock', authenticate, requireRole('admin'), updateStock);
 
+
 /**
- * @route   POST /api/products/:id/reserve
- * @desc    Reservar stock
- * @access  Private (Admin)
+ * @swagger
+ * /api/products/{id}/reserve:
+ *   post:
+ *     tags: [Products]
+ *     summary: Reservar stock de producto
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del producto
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - quantity
+ *             properties:
+ *               quantity:
+ *                 type: integer
+ *                 example: 2
+ *               orderId:
+ *                 type: string
+ *                 example: "6567e1c2f1a2b3c4d5e6f7a8"
+ *     responses:
+ *       200:
+ *         description: Stock reservado exitosamente
  */
 router.post('/:id/reserve', authenticate, requireRole('admin'), reserveStock);
 
+
 /**
- * @route   POST /api/products/:id/release
- * @desc    Liberar stock reservado
- * @access  Private (Admin)
+ * @swagger
+ * /api/products/{id}/release:
+ *   post:
+ *     tags: [Products]
+ *     summary: Liberar stock reservado de producto
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del producto
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - quantity
+ *             properties:
+ *               quantity:
+ *                 type: integer
+ *                 example: 2
+ *               orderId:
+ *                 type: string
+ *                 example: "6567e1c2f1a2b3c4d5e6f7a8"
+ *     responses:
+ *       200:
+ *         description: Stock liberado exitosamente
  */
 router.post('/:id/release', authenticate, requireRole('admin'), releaseStock);
 

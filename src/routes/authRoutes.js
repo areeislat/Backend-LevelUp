@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-const { extractTenant } = require('../middlewares/tenantMiddleware');
 const { authenticate } = require('../middlewares/authMiddleware');
 
 /**
@@ -10,14 +9,7 @@ const { authenticate } = require('../middlewares/authMiddleware');
  *   post:
  *     tags: [Auth]
  *     summary: Registrar nuevo usuario
- *     description: Crea un nuevo usuario en el tenant especificado. Role customer por defecto.
- *     parameters:
- *       - in: header
- *         name: x-tenant-id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID del tenant
+ *     description: Crea un nuevo usuario. Role admin por defecto.
  *     requestBody:
  *       required: true
  *       content:
@@ -68,7 +60,7 @@ const { authenticate } = require('../middlewares/authMiddleware');
  *       409:
  *         description: Email ya registrado
  */
-router.post('/register', extractTenant, authController.register);
+router.post('/register', authController.register);
 
 /**
  * @swagger
@@ -77,13 +69,6 @@ router.post('/register', extractTenant, authController.register);
  *     tags: [Auth]
  *     summary: Login de usuario
  *     description: Autenticación con email y password, retorna JWT
- *     parameters:
- *       - in: header
- *         name: x-tenant-id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID del tenant
  *     requestBody:
  *       required: true
  *       content:
@@ -127,7 +112,7 @@ router.post('/register', extractTenant, authController.register);
  *       403:
  *         description: Usuario inactivo
  */
-router.post('/login', extractTenant, authController.login);
+router.post('/login', authController.login);
 
 /**
  * @swagger
@@ -164,7 +149,6 @@ router.post('/login', extractTenant, authController.login);
  *       401:
  *         description: No autorizado
  */
-router.post('/register', extractTenant, authController.register);
 
 /**
  * @swagger

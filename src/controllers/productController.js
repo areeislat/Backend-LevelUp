@@ -20,7 +20,7 @@ const getProducts = async (req, res, next) => {
       limit = 20
     } = req.query;
 
-    const filter = { isActive: true, isDeleted: false };
+    const filter = { isActive: true };
 
     if (category) filter.category = category;
     if (brand) filter.brand = brand;
@@ -75,18 +75,15 @@ const getProductById = async (req, res, next) => {
     const product = await Product.findOne({
       $or: [
         { _id: idOrSlug.match(/^[0-9a-fA-F]{24}$/) ? idOrSlug : null },
-        { slug: idOrSlug }
+        { slug: idOrSlug },
+        { productId: idOrSlug }
       ],
-      isActive: true,
-      isDeleted: false
+      isActive: true
     }).populate('category', 'name slug');
 
     if (!product) {
       throw new NotFoundError('Producto no encontrado');
     }
-
-    // Incrementar vistas
-    await product.incrementViews();
 
     res.json({
       message: 'Producto obtenido exitosamente',
@@ -157,7 +154,7 @@ const deleteProduct = async (req, res, next) => {
 
     const product = await Product.findByIdAndUpdate(
       id,
-      { isDeleted: true, deletedAt: new Date() },
+      { isActive: false },
       { new: true }
     );
 

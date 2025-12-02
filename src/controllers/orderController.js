@@ -222,6 +222,14 @@ const updateOrderStatus = async (req, res, next) => {
 
     if (status === 'confirmed') {
       order.confirmedAt = new Date();
+      // Decrementar stock real de los productos
+      for (const item of order.items) {
+        // Cargar el producto actualizado
+        const product = await Product.findById(item.product);
+        if (product) {
+          await product.confirmSale(item.quantity, order._id, req.user?._id);
+        }
+      }
     } else if (status === 'shipped') {
       order.shippedAt = new Date();
     } else if (status === 'delivered') {
