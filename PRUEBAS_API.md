@@ -238,4 +238,241 @@ Una vez que tengas productos creados, puedes:
 
 ---
 
+## 🧪 Pruebas CRUD Completas de Productos
+
+### ✅ 1. CREATE - Crear Producto
+**Ya probado arriba** ✓
+
+---
+
+### ✅ 2. READ - Obtener Todos los Productos
+
+**Endpoint:** `GET http://localhost:3000/api/products`
+
+**Headers:** Ninguno requerido
+
+**Respuesta esperada:** Lista de todos los productos activos
+
+---
+
+### ✅ 3. READ - Obtener Un Producto
+
+Puedes buscar por 3 formas diferentes:
+
+**a) Por productId:**
+```
+GET http://localhost:3000/api/products/AUD-001
+```
+
+**b) Por slug:**
+```
+GET http://localhost:3000/api/products/audifinos-metal-ear
+```
+
+**c) Por _id de MongoDB:**
+```
+GET http://localhost:3000/api/products/692ee1ce1021c87a1eec94b9
+```
+
+**Headers:** Ninguno requerido
+
+---
+
+### ✅ 4. UPDATE - Actualizar Producto
+
+**Endpoint:** `PUT http://localhost:3000/api/products/692ee1ce1021c87a1eec94b9`
+
+**Headers:**
+```
+Content-Type: application/json
+Authorization: Bearer TU_TOKEN_AQUI
+```
+
+**Body:** (Envía solo los campos que quieres actualizar)
+```json
+{
+  "name": "Audífonos Metal EAR Premium",
+  "price": 29990,
+  "oldPrice": 39990,
+  "description": "Audífonos de la mejor calidad del mundo con cancelación de ruido"
+}
+```
+
+**Respuesta esperada:**
+```json
+{
+  "message": "Producto actualizado exitosamente",
+  "statusCode": 200,
+  "data": {
+    "product": {
+      "_id": "692ee1ce1021c87a1eec94b9",
+      "name": "Audífonos Metal EAR Premium",
+      "price": 29990,
+      ...
+    }
+  }
+}
+```
+
+---
+
+### ✅ 5. DELETE - Eliminar Producto (Soft Delete)
+
+**Endpoint:** `DELETE http://localhost:3000/api/products/692ee1ce1021c87a1eec94b9`
+
+**Headers:**
+```
+Authorization: Bearer TU_TOKEN_AQUI
+```
+
+**Respuesta esperada:**
+```json
+{
+  "message": "Producto eliminado exitosamente",
+  "statusCode": 200,
+  "data": {
+    "product": {
+      "_id": "692ee1ce1021c87a1eec94b9",
+      "isActive": false,
+      ...
+    }
+  }
+}
+```
+
+**⚠️ NOTA:** El producto se marca como `isActive: false` pero NO se borra de la base de datos (soft delete).
+
+---
+
+### ✅ 6. PATCH - Actualizar Solo el Stock
+
+**Endpoint:** `PATCH http://localhost:3000/api/products/692ee1ce1021c87a1eec94b9/stock`
+
+**Headers:**
+```
+Content-Type: application/json
+Authorization: Bearer TU_TOKEN_AQUI
+```
+
+**Body:**
+```json
+{
+  "quantity": 10,
+  "type": "restock",
+  "reason": "Nueva compra a proveedor"
+}
+```
+
+**Tipos de actualización disponibles:**
+- `restock` - Agregar stock (suma cantidad)
+- `sale` - Venta (resta cantidad)
+- `return` - Devolución (suma cantidad)
+- `adjustment` - Ajuste manual
+
+**Respuesta esperada:**
+```json
+{
+  "message": "Stock actualizado exitosamente",
+  "statusCode": 200,
+  "data": {
+    "product": {
+      "stock": {
+        "current": 60,
+        ...
+      }
+    }
+  }
+}
+```
+
+---
+
+### ✅ 7. POST - Reservar Stock (para órdenes)
+
+**Endpoint:** `POST http://localhost:3000/api/products/692ee1ce1021c87a1eec94b9/reserve`
+
+**Headers:**
+```
+Content-Type: application/json
+Authorization: Bearer TU_TOKEN_AQUI
+```
+
+**Body:**
+```json
+{
+  "quantity": 5,
+  "orderId": "ORDER-123"
+}
+```
+
+**Respuesta esperada:**
+```json
+{
+  "message": "Stock reservado exitosamente",
+  "statusCode": 200,
+  "data": {
+    "product": {
+      "stock": {
+        "current": 55,
+        "reserved": 5,
+        ...
+      }
+    }
+  }
+}
+```
+
+---
+
+### ✅ 8. POST - Liberar Stock Reservado
+
+**Endpoint:** `POST http://localhost:3000/api/products/692ee1ce1021c87a1eec94b9/release`
+
+**Headers:**
+```
+Content-Type: application/json
+Authorization: Bearer TU_TOKEN_AQUI
+```
+
+**Body:**
+```json
+{
+  "quantity": 5,
+  "orderId": "ORDER-123"
+}
+```
+
+**Respuesta esperada:**
+```json
+{
+  "message": "Stock liberado exitosamente",
+  "statusCode": 200,
+  "data": {
+    "product": {
+      "stock": {
+        "current": 60,
+        "reserved": 0,
+        ...
+      }
+    }
+  }
+}
+```
+
+---
+
+## 📋 Orden de Pruebas Recomendado
+
+1. **CREATE** - Crear un producto nuevo
+2. **READ ALL** - Verificar que aparece en la lista
+3. **READ ONE** - Obtener el producto por productId/slug/_id
+4. **UPDATE** - Actualizar nombre y precio
+5. **PATCH STOCK** - Agregar más stock (restock)
+6. **RESERVE** - Reservar algunas unidades
+7. **RELEASE** - Liberar la reserva
+8. **DELETE** - Marcar como inactivo
+9. **READ ALL** - Verificar que ya no aparece en la lista (porque isActive=false)
+
+---
+
 **¡Listo!** Ahora puedes probar toda la API siguiendo este flujo. 🚀
