@@ -1,5 +1,7 @@
 const Payment = require('../models/orders/Payment');
 const Order = require('../models/orders/Order');
+// CORRECCIÓN: Faltaba importar este modelo para dar los puntos
+const LoyaltyAccount = require('../models/loyalty/LoyaltyAccount'); 
 const { ValidationError, NotFoundError } = require('../utils/errors');
 
 /**
@@ -85,17 +87,11 @@ const createPayment = async (req, res, next) => {
     const userId = req.user._id;
     const { orderId, method, gateway } = req.body;
 
-    // Verificar que la orden existe
     const order = await Order.findOne({ _id: orderId, user: userId });
-    if (!order) {
-      throw new NotFoundError('Orden no encontrada');
-    }
-
-    if (order.payment.status === 'paid') {
-      throw new ValidationError('Esta orden ya ha sido pagada');
-    }
+    if (!order) throw new NotFoundError('Orden no encontrada');
+    if (order.payment.status === 'paid') throw new ValidationError('Esta orden ya ha sido pagada');
     
-    // --- SIMULACIÓN: CREAR PAGO PENDIENTE ---
+    // 1. Crear Pago
     const payment = await Payment.create({
       order: orderId,
       user: userId,
@@ -103,20 +99,30 @@ const createPayment = async (req, res, next) => {
       currency: 'CLP',
       method,
       gateway,
-      status: 'pending' // Inicia como pendiente
+      status: 'pending'
     });
     
-    // --- SIMULACIÓN: MARCAR COMO COMPLETADO INMEDIATAMENTE ---
-    
-    // 1. Marcar el pago como completo en el modelo Payment
+    // 2. Simular Éxito
     await payment.complete('SIMULATION_SUCCESS', 'AUTH_SIM'); 
-
-    // 2. Marcar la orden como pagada (actualiza el estado de la orden a 'confirmed')
     await order.markAsPaid(payment.transactionId, gateway, 'SIMULATION_SUCCESS');
     
+    // 3. --- ASIGNAR PUNTOS DE LOYALTY ---
+    try {
+        const account = await LoyaltyAccount.findOne({ user: userId });
+        if (account) {
+            // Regla: 1 punto por cada $100 pesos
+            const pointsEarned = Math.floor(order.total / 100); 
+            if (pointsEarned > 0) {
+                await account.addPoints(pointsEarned, `Compra Orden #${order.orderNumber}`, order._id);
+            }
+        }
+    } catch (loyaltyError) {
+        console.error("Error asignando puntos (no crítico para la venta):", loyaltyError);
+    }
+    // ---------------------------------------
 
     res.status(201).json({
-      message: 'Pago creado y confirmado exitosamente (Simulación)',
+      message: 'Pago exitoso y puntos asignados',
       statusCode: 201,
       data: { payment }
     });
@@ -131,15 +137,9 @@ const createPayment = async (req, res, next) => {
  */
 const handleWebhook = async (req, res, next) => {
   try {
-    // Solo un stub: recibe el webhook y responde OK.
     console.log(`Webhook recibido de ${req.params.gateway}:`, req.body);
-    res.json({
-      message: 'Webhook procesado (STUB)',
-      statusCode: 200
-    });
-  } catch (error) {
-    next(error);
-  }
+    res.json({ message: 'Webhook procesado (STUB)', statusCode: 200 });
+  } catch (error) { next(error); }
 };
 
 module.exports = {

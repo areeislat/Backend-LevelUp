@@ -1,4 +1,5 @@
 const User = require('../models/auth/User');
+const LoyaltyAccount = require('../models/loyalty/LoyaltyAccount');
 const { generateToken } = require('../utils/jwt');
 
 // ✅ REGISTER CORREGIDO
@@ -27,6 +28,12 @@ const register = async (req, res, next) => {
       password,
       role: role || 'user',
       isActive: true
+    });
+
+    await LoyaltyAccount.create({
+      user: user._id,
+      points: 1000, // 1000 Puntos de regalo
+      tier: 'bronze'
     });
 
     const token = generateToken({

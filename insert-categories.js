@@ -5,7 +5,7 @@ const Category = require('./src/models/catalog/Category');
 // node insert-categories.js
 
 // Tu URI de MongoDB
-const MONGODB_URI = 'mongodb+srv://are_isla:F4vrroh70AOLNnaM@cluster0.2ka54bc.mongodb.net/ecommerce?retryWrites=true&w=majority';
+const MONGODB_URI = 'mongodb+srv://marpalmal:awNRTG1Ur8gt3t6H@proyecto.qbt3om8.mongodb.net/LevelUP?retryWrites=true&w=majority';
 
 const categorias = [
   {
