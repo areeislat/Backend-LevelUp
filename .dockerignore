@@ -1,0 +1,59 @@
+# Node modules
+node_modules
+npm-debug.log
+
+# Environment files (will be configured in GCP)
+.env
+.env.local
+.env.*.local
+
+# Git files
+.git
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test
+tests
+*.test.js
+*.spec.js
+coverage
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Vercel
+.vercel
+vercel.json
+.vercelignore
+
+# Cursor
+.cursor
+
+# Logs
+logs
+*.log
+
+# Temporary files
+tmp
+temp
+
+# Scripts that don't need to be in production
+insert-categories.js
+insert-products.js
+CHANGELOG.md
+GITFLOW.md
+PRUEBAS_API.md
+QUICKSTART.md
