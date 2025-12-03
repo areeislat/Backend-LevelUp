@@ -282,10 +282,6 @@ const swaggerOptions = {
         description: 'Gestión de productos del catálogo'
       },
       {
-        name: 'Reviews',
-        description: 'Reseñas y calificaciones de productos'
-      },
-      {
         name: 'Cart',
         description: 'Carrito de compras persistente'
       },
@@ -300,14 +296,6 @@ const swaggerOptions = {
       {
         name: 'Loyalty',
         description: 'Sistema de lealtad y recompensas'
-      },
-      {
-        name: 'Notifications',
-        description: 'Notificaciones de usuario'
-      },
-      {
-        name: 'Tickets',
-        description: 'Sistema de soporte y tickets'
       }
     ]
   },

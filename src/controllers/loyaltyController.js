@@ -263,6 +263,9 @@ const redeemReward = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const { rewardId } = req.body;
+    console.log("🔥 REWARD ID RECIBIDO:", rewardId);
+console.log("📌 Tipo:", typeof rewardId);
+
 
     // Obtener cuenta de lealtad
     const account = await LoyaltyAccount.findOne({ user: userId });
@@ -277,9 +280,9 @@ const redeemReward = async (req, res, next) => {
     }
 
     // Verificar disponibilidad
-    if (!reward.isAvailable()) {
+if (!reward.isAvailable) {
       throw new ValidationError('Recompensa no disponible');
-    }
+}
 
     // Verificar puntos suficientes
     if (account.points < reward.pointsCost) {

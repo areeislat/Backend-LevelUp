@@ -110,6 +110,7 @@ const createOrder = async (req, res, next) => {
 
     // Crear orden
     const order = await Order.create({
+      orderNumber: generateOrderNumber(), 
       user: userId,
       items: orderItems,
       subtotal: cart.subtotal || 0,
@@ -189,6 +190,10 @@ const updateShippingInfo = async (req, res, next) => { /* ... mismo código ... 
 
 const getOrderStats = async (req, res, next) => { /* ... mismo código ... */ 
     res.json({message: "No implementado"});
+};
+
+const generateOrderNumber = () => {
+  return "ORD-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
 };
 
 module.exports = {
