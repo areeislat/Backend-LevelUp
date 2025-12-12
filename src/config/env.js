@@ -10,7 +10,7 @@ module.exports = {
   NODE_ENV: process.env.NODE_ENV || 'development',
 
   // Database
-  MONGODB_URI: process.env.MONGODB_URI || 'mongodb+srv://marpalmal:awNRTG1Ur8gt3t6H@proyecto.qbt3om8.mongodb.net/ecommerce?retryWrites=true&w=majority',
+  MONGODB_URI: process.env.MONGODB_URI || 'mongodb+srv://are_isla:F4vrroh70AOLNnaM@cluster0.2ka54bc.mongodb.net/ecommerce?retryWrites=true&w=majority&appName=Cluster0',
 
   // JWT
   JWT_SECRET: process.env.JWT_SECRET || 'default-secret-change-in-production',

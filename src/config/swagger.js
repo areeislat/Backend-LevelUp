@@ -22,12 +22,12 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: 'http://localhost:3000',
+        url: 'http://localhost:8080',
         description: 'Servidor de desarrollo'
       },
       {
-        url: 'https://api.ecommerce.com',
-        description: 'Servidor de producción'
+        url: 'https://ecommerce-backend-749990022458.us-central1.run.app',
+        description: 'Servidor de producción (Google Cloud Run)'
       }
     ],
     components: {

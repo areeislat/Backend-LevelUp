@@ -51,83 +51,248 @@ router.get('/account', authenticate, getMyLoyaltyAccount);
 router.get('/transactions', authenticate, getMyTransactions);
 
 /**
- * @route   POST /api/loyalty/add-points
- * @desc    Agregar puntos manualmente
- * @access  Private (Admin)
+ * @swagger
+ * /api/loyalty/add-points:
+ *   post:
+ *     tags: [Loyalty]
+ *     summary: Agregar puntos manualmente (Admin)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               points:
+ *                 type: number
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Puntos agregados exitosamente
  */
 router.post('/add-points', authenticate, requireRole('admin'), addPoints);
 
 /**
- * @route   POST /api/loyalty/process-order-points
- * @desc    Procesar puntos por compra (interno)
- * @access  Private (Admin)
+ * @swagger
+ * /api/loyalty/process-order-points:
+ *   post:
+ *     tags: [Loyalty]
+ *     summary: Procesar puntos por compra (Admin)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               orderId:
+ *                 type: string
+ *               orderTotal:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Puntos procesados exitosamente
  */
 router.post('/process-order-points', authenticate, requireRole('admin'), processOrderPoints);
 
 // ==================== REWARDS ====================
 
 /**
- * @route   GET /api/loyalty/rewards
- * @desc    Obtener todas las recompensas disponibles
- * @access  Public
+ * @swagger
+ * /api/loyalty/rewards:
+ *   get:
+ *     tags: [Loyalty]
+ *     summary: Obtener todas las recompensas disponibles
+ *     description: Lista todas las recompensas activas
+ *     responses:
+ *       200:
+ *         description: Lista de recompensas
  */
 router.get('/rewards', getRewards);
 
 /**
- * @route   GET /api/loyalty/rewards/:id
- * @desc    Obtener recompensa por ID
- * @access  Public
+ * @swagger
+ * /api/loyalty/rewards/{id}:
+ *   get:
+ *     tags: [Loyalty]
+ *     summary: Obtener recompensa por ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Recompensa encontrada
  */
 router.get('/rewards/:id', getRewardById);
 
 /**
- * @route   POST /api/loyalty/rewards
- * @desc    Crear recompensa
- * @access  Private (Admin)
+ * @swagger
+ * /api/loyalty/rewards:
+ *   post:
+ *     tags: [Loyalty]
+ *     summary: Crear recompensa (Admin)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               pointsCost:
+ *                 type: number
+ *               value:
+ *                 type: number
+ *               category:
+ *                 type: string
+ *               stock:
+ *                 type: number
+ *     responses:
+ *       201:
+ *         description: Recompensa creada exitosamente
  */
 router.post('/rewards', authenticate, requireRole('admin'), createReward);
 
 /**
- * @route   PUT /api/loyalty/rewards/:id
- * @desc    Actualizar recompensa
- * @access  Private (Admin)
+ * @swagger
+ * /api/loyalty/rewards/{id}:
+ *   put:
+ *     tags: [Loyalty]
+ *     summary: Actualizar recompensa (Admin)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Recompensa actualizada
  */
 router.put('/rewards/:id', authenticate, requireRole('admin'), updateReward);
 
 /**
- * @route   DELETE /api/loyalty/rewards/:id
- * @desc    Eliminar recompensa
- * @access  Private (Admin)
+ * @swagger
+ * /api/loyalty/rewards/{id}:
+ *   delete:
+ *     tags: [Loyalty]
+ *     summary: Eliminar recompensa (Admin)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Recompensa eliminada
  */
 router.delete('/rewards/:id', authenticate, requireRole('admin'), deleteReward);
 
 // ==================== REDEEM REWARDS ====================
 
 /**
- * @route   POST /api/loyalty/redeem
- * @desc    Canjear recompensa
- * @access  Private
+ * @swagger
+ * /api/loyalty/redeem:
+ *   post:
+ *     tags: [Loyalty]
+ *     summary: Canjear recompensa
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               rewardId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Recompensa canjeada exitosamente
  */
 router.post('/redeem', authenticate, redeemReward);
 
 /**
- * @route   GET /api/loyalty/my-rewards
- * @desc    Obtener mis recompensas canjeadas
- * @access  Private
+ * @swagger
+ * /api/loyalty/my-rewards:
+ *   get:
+ *     tags: [Loyalty]
+ *     summary: Obtener mis recompensas canjeadas
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de recompensas canjeadas
  */
 router.get('/my-rewards', authenticate, getMyRedeemedRewards);
 
 /**
- * @route   POST /api/loyalty/my-rewards/:id/use
- * @desc    Usar recompensa canjeada
- * @access  Private
+ * @swagger
+ * /api/loyalty/my-rewards/{id}/use:
+ *   post:
+ *     tags: [Loyalty]
+ *     summary: Usar recompensa canjeada
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Recompensa utilizada exitosamente
  */
 router.post('/my-rewards/:id/use', authenticate, useRedeemedReward);
 
 /**
- * @route   POST /api/loyalty/validate-coupon
- * @desc    Validar cupón de recompensa
- * @access  Public
+ * @swagger
+ * /api/loyalty/validate-coupon:
+ *   post:
+ *     tags: [Loyalty]
+ *     summary: Validar cupón de recompensa
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Cupón validado
  */
 router.post('/validate-coupon', validateCoupon);
 

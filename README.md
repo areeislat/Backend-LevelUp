@@ -23,7 +23,8 @@ Backend completo y escalable para e-commerce construido con Node.js, Express, Mo
 - **[QUICKSTART.md](./QUICKSTART.md)** - Guía de inicio rápido
 - **[TESTING.md](./TESTING.md)** - Guía de pruebas funcionales
 - **[API_EXAMPLES.md](./API-EXAMPLES.md)** - Ejemplos de uso de la API
-- **[Swagger Docs](http://localhost:3000/api-docs)** - Documentación interactiva (cuando el servidor esté corriendo)
+- **[DEPLOYMENT-GCP.md](./DEPLOYMENT-GCP.md)** - Guía de despliegue en Google Cloud Platform
+- **[Swagger Docs](http://localhost:8080/api-docs)** - Documentación interactiva (cuando el servidor esté corriendo)
 
 ## 📋 Requisitos Previos
 
@@ -51,7 +52,7 @@ Crea un archivo `.env` en la raíz del proyecto:
 
 ```env
 # Server Configuration
-PORT=3000
+PORT=8080
 NODE_ENV=development
 
 # MongoDB Atlas Configuration
@@ -89,7 +90,7 @@ npm run dev
 npm start
 ```
 
-El servidor estará disponible en `http://localhost:3000`
+El servidor estará disponible en `http://localhost:8080`
 
 ## 📁 Estructura del Proyecto
 
@@ -242,6 +243,9 @@ POST   /api/cart/items                  - Añadir producto al carrito
 PUT    /api/cart/items/:productId       - Actualizar cantidad
 DELETE /api/cart/items/:productId       - Eliminar producto del carrito
 DELETE /api/cart                        - Vaciar carrito
+POST   /api/cart/coupon                 - Aplicar cupón de descuento
+DELETE /api/cart/coupon                 - Remover cupón de descuento
+POST   /api/cart/merge                  - Fusionar carrito de invitado con usuario
 ```
 
 ### Órdenes
@@ -256,10 +260,19 @@ POST   /api/orders/:id/cancel           - Cancelar orden
 
 ### Loyalty (Sistema de Lealtad)
 ```
-GET    /api/loyalty/account             - Obtener cuenta de puntos
-GET    /api/loyalty/rewards             - Obtener recompensas disponibles
-POST   /api/loyalty/redeem/:rewardId    - Canjear recompensa
-GET    /api/loyalty/history             - Historial de transacciones
+GET    /api/loyalty/account                - Obtener cuenta de puntos
+GET    /api/loyalty/transactions           - Historial de transacciones de puntos
+POST   /api/loyalty/add-points             - Agregar puntos manualmente (Admin)
+POST   /api/loyalty/process-order-points   - Procesar puntos por compra (Admin)
+GET    /api/loyalty/rewards                - Obtener recompensas disponibles
+GET    /api/loyalty/rewards/:id            - Obtener recompensa por ID
+POST   /api/loyalty/rewards                - Crear recompensa (Admin)
+PUT    /api/loyalty/rewards/:id            - Actualizar recompensa (Admin)
+DELETE /api/loyalty/rewards/:id            - Eliminar recompensa (Admin)
+POST   /api/loyalty/redeem                 - Canjear recompensa
+GET    /api/loyalty/my-rewards             - Obtener mis recompensas canjeadas
+POST   /api/loyalty/my-rewards/:id/use     - Usar recompensa canjeada
+POST   /api/loyalty/validate-coupon        - Validar cupón de recompensa
 ```
 
 ## 🧪 Ejemplos de Uso
@@ -270,7 +283,7 @@ Ver [PRUEBAS_API.md](./PRUEBAS_API.md) para ejemplos completos y guía de prueba
 
 ```bash
 # Registrar usuario
-POST http://localhost:3000/api/auth/register
+POST http://localhost:8080/api/auth/register
 Content-Type: application/json
 
 {
@@ -281,7 +294,7 @@ Content-Type: application/json
 }
 
 # Login
-POST http://localhost:3000/api/auth/login
+POST http://localhost:8080/api/auth/login
 Content-Type: application/json
 
 {
@@ -293,7 +306,7 @@ Content-Type: application/json
 ### Crear Producto
 
 ```bash
-POST http://localhost:3000/api/products
+POST http://localhost:8080/api/products
 Authorization: Bearer <TOKEN>
 Content-Type: application/json
 
@@ -318,7 +331,7 @@ Content-Type: application/json
 ### Subir Imagen a Cloudinary
 
 ```bash
-POST http://localhost:3000/api/products/upload-image
+POST http://localhost:8080/api/products/upload-image
 Authorization: Bearer <TOKEN>
 Content-Type: multipart/form-data
 
