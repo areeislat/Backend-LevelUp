@@ -4,6 +4,57 @@ const Product = require('../models/catalog/Product');
 const { ValidationError, NotFoundError } = require('../utils/errors');
 
 /**
+ * Obtener TODAS las órdenes (solo para admin)
+ */
+const getAllOrders = async (req, res, next) => {
+  try {
+    const { status, page = 1, limit = 50, userId, search } = req.query;
+    const filter = {};
+    
+    // Filtrar por estado si se proporciona
+    if (status) filter.status = status;
+    
+    // Filtrar por usuario específico si se proporciona
+    if (userId) filter.user = userId;
+    
+    // Búsqueda por número de orden o email de usuario
+    if (search) {
+      filter.$or = [
+        { orderNumber: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [orders, total] = await Promise.all([
+      Order.find(filter)
+        .populate('user', 'name email')
+        .populate('items.product', 'name image brand')
+        .sort('-createdAt')
+        .skip(skip)
+        .limit(Number(limit)),
+      Order.countDocuments(filter)
+    ]);
+
+    res.json({
+      message: 'Todas las órdenes obtenidas exitosamente',
+      statusCode: 200,
+      data: { 
+        orders, 
+        pagination: { 
+          page: Number(page), 
+          limit: Number(limit), 
+          total, 
+          pages: Math.ceil(total / Number(limit)) 
+        } 
+      }
+    });
+  } catch (error) { 
+    next(error); 
+  }
+};
+
+/**
  * Obtener pedidos del usuario
  */
 const getOrders = async (req, res, next) => {
@@ -197,5 +248,12 @@ const generateOrderNumber = () => {
 };
 
 module.exports = {
-  getOrders, getOrderById, createOrder, cancelOrder, updateOrderStatus, updateShippingInfo, getOrderStats
+  getAllOrders,
+  getOrders, 
+  getOrderById, 
+  createOrder, 
+  cancelOrder, 
+  updateOrderStatus, 
+  updateShippingInfo, 
+  getOrderStats
 };

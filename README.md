@@ -2,6 +2,12 @@
 
 Backend completo y escalable para e-commerce construido con Node.js, Express, MongoDB Atlas y Cloudinary.
 
+## 🌐 URL de Producción
+
+**Servicio activo en Google Cloud Run**: https://ecommerce-backend-749990022458.us-central1.run.app
+
+**Documentación Swagger en producción**: https://ecommerce-backend-749990022458.us-central1.run.app/api-docs
+
 ## 🚀 Características
 
 - **Autenticación JWT**: Sistema seguro con email y contraseña hasheada
@@ -15,7 +21,8 @@ Backend completo y escalable para e-commerce construido con Node.js, Express, Mo
 - **Arquitectura limpia**: Separación en capas (modelos, controladores, rutas, middlewares)
 - **Manejo de errores centralizado**: Respuestas consistentes y claras
 - **Documentación Swagger**: API docs en `/api-docs`
-- **Seguridad**: CORS, Helmet, Rate Limiting, bcrypt
+- **Seguridad**: CORS multi-origen, Helmet, Rate Limiting, bcrypt
+- **Despliegue**: Google Cloud Run con CI/CD automático
 
 ## 📖 Documentación Adicional
 
@@ -67,8 +74,8 @@ CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 
-# CORS Configuration
-CORS_ORIGIN=http://localhost:3001
+# CORS Configuration (múltiples orígenes separados por coma)
+CORS_ORIGIN=http://localhost:5173,https://level-up-gamer-i5lm.vercel.app
 ```
 
 4. **Insertar datos iniciales** (Opcional)
@@ -234,6 +241,7 @@ PATCH  /api/products/:id/stock          - Actualizar stock (admin)
 POST   /api/products/:id/reserve        - Reservar stock (admin)
 POST   /api/products/:id/release        - Liberar stock (admin)
 POST   /api/products/upload-image       - Subir imagen a Cloudinary (admin)
+POST   /api/products/upload-image-test  - Subir imagen sin autenticación (temporal - testing)
 ```
 
 ### Carrito
@@ -253,6 +261,7 @@ POST   /api/cart/merge                  - Fusionar carrito de invitado con usuar
 POST   /api/orders                      - Crear orden desde carrito
 GET    /api/orders/my-orders            - Obtener mis órdenes
 GET    /api/orders                      - Obtener todas las órdenes (admin)
+GET    /api/orders/admin/all            - Obtener todas las órdenes del sistema con filtros (admin)
 GET    /api/orders/:id                  - Obtener orden por ID
 PUT    /api/orders/:id/status           - Actualizar estado (admin)
 POST   /api/orders/:id/cancel           - Cancelar orden
@@ -338,6 +347,21 @@ Content-Type: multipart/form-data
 # Envía un FormData con la imagen en el campo "image"
 ```
 
+### Obtener Todas las Órdenes (Admin)
+
+```bash
+# Obtener todas las órdenes con filtros opcionales
+GET http://localhost:8080/api/orders/admin/all?status=pending&page=1&limit=50
+Authorization: Bearer <TOKEN_ADMIN>
+
+# Parámetros de query opcionales:
+# - status: pending, processing, shipped, delivered, cancelled
+# - userId: ID del usuario para filtrar sus órdenes
+# - search: Búsqueda por número de orden, email o nombre
+# - page: Número de página (default: 1)
+# - limit: Órdenes por página (default: 50, max: 100)
+```
+
 ### Insertar Datos Masivos
 
 ```bash
@@ -352,9 +376,10 @@ node insert-products.js
 
 - **Contraseñas hasheadas**: Usando bcryptjs con salt de 10 rondas
 - **JWT**: Tokens con expiración de 7 días
-- **CORS**: Configurado para orígenes específicos
+- **CORS**: Configurado para múltiples orígenes (localhost:5173, Vercel) con credenciales
 - **Helmet**: Protección de headers HTTP
 - **Rate Limiting**: Prevención de ataques de fuerza bruta
+- **Trust Proxy**: Habilitado para Google Cloud Run
 - **Validación de entrada**: Con validadores personalizados
 - **Autorización basada en roles**: Admin y User con permisos diferenciados
 - **Cloudinary**: Almacenamiento seguro de imágenes con API Key/Secret

@@ -27,6 +27,9 @@ const loyaltyRoutes = require('./routes/loyaltyRoutes');
 
 const app = express();
 
+// Trust proxy - Necesario para Cloud Run y otros proxies reversos
+app.set('trust proxy', true);
+
 // =====================
 // Conectar a MongoDB
 // =====================
@@ -36,13 +39,42 @@ connectDB();
 // Middlewares Globales
 // =====================
 
-// Seguridad con Helmet
-app.use(helmet());
+// CORS Manual - Manejar todas las peticiones OPTIONS y agregar headers explícitamente
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://level-up-gamer-i5lm.vercel.app'
+];
 
-// CORS
-app.use(cors({
-  origin: config.CORS_ORIGIN,
-  credentials: true
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Verificar si el origin está permitido
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+  } else if (config.CORS_ORIGIN === '*') {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
+  res.header('Access-Control-Max-Age', '600');
+  
+  // Responder inmediatamente a peticiones OPTIONS
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  
+  next();
+});
+
+// Seguridad con Helmet - Configurado para no interferir con CORS
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginEmbedderPolicy: false
 }));
 
 // Logger HTTP con Morgan

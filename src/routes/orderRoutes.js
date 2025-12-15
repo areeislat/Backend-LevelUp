@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {
+  getAllOrders,
   getOrders,
   getOrderById,
   createOrder,
@@ -10,6 +11,52 @@ const {
   getOrderStats
 } = require('../controllers/orderController');
 const { authenticate, requireRole } = require('../middlewares/authMiddleware');
+
+/**
+ * @swagger
+ * /api/orders/admin/all:
+ *   get:
+ *     tags: [Orders]
+ *     summary: Obtener TODAS las órdenes (Admin)
+ *     description: Endpoint exclusivo para administradores que retorna todas las órdenes del sistema con filtros opcionales
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, processing, shipped, delivered, cancelled]
+ *         description: Filtrar por estado de la orden
+ *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         description: Filtrar por ID de usuario específico
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Buscar por número de orden
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *     responses:
+ *       200:
+ *         description: Lista completa de órdenes
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: No autorizado (requiere rol admin)
+ */
+router.get('/admin/all', authenticate, requireRole('admin'), getAllOrders);
 
 /**
  * @route   GET /api/orders/stats

@@ -52,6 +52,39 @@ router.post('/upload-image', authenticate, requireRole('admin'), upload.single('
 
 /**
  * @swagger
+ * /api/products/upload-image-test:
+ *   post:
+ *     tags: [Products]
+ *     summary: (TEMPORAL) Subir imagen sin autenticación - SOLO PARA PRUEBAS
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: URL de la imagen subida
+ */
+router.post('/upload-image-test', upload.single('image'), (req, res) => {
+  console.log('📤 Upload test endpoint hit');
+  console.log('File received:', req.file ? 'Yes' : 'No');
+  
+  if (!req.file || !req.file.path) {
+    console.error('❌ No file received');
+    return res.status(400).json({ message: 'No se subió ninguna imagen', statusCode: 400 });
+  }
+  
+  console.log('✅ Image uploaded to:', req.file.path);
+  res.json({ url: req.file.path });
+});
+
+/**
+ * @swagger
  * /api/products:
  *   get:
  *     tags: [Products]
