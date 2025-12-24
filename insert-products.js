@@ -5,7 +5,7 @@ const Product = require('./src/models/catalog/Product');
 // node insert-products.js
 
 // Tu URI de MongoDB
-const MONGODB_URI = 'mongodb+srv://are_isla:F4vrroh70AOLNnaM@cluster0.2ka54bc.mongodb.net/ecommerce?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI = '';
 
 const productos = [
   {
