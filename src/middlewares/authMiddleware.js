@@ -70,18 +70,47 @@ const authenticate = (req, res, next) => {
 };
 
 /**
+ * Middleware de autenticación opcional
+ * Si hay un token válido, identifica al usuario.
+ * Si no hay token o es inválido, continúa como invitado sin error.
+ */
+const optionalAuthenticate = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    // Si hay header y formato correcto, intentamos verificar
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      
+      if (token) {
+        // Verificar el token
+        const decoded = jwt.verify(token, config.JWT_SECRET);
+        
+        // Si el token es válido, guardamos el usuario
+        if (decoded.userId) {
+          req.user = {
+            _id: decoded.userId,
+            userId: decoded.userId,
+            role: decoded.role,
+            email: decoded.email
+          };
+        }
+      }
+    }
+    // Siempre continuamos, haya usuario o no (req.user será undefined si no hay token válido)
+    next();
+  } catch (error) {
+    // Si el token expira o es inválido, simplemente ignoramos el error
+    // y dejamos que el usuario continúe como invitado
+    next();
+  }
+};
+
+/**
  * Middleware helper de autorización por rol
  * Verifica que el usuario tenga uno de los roles permitidos
- * 
- * @param {...string} rolesPermitidos - Lista de roles permitidos
+ * * @param {...string} rolesPermitidos - Lista de roles permitidos
  * @returns {Function} Middleware de Express
- * 
- * @example
- * // Solo admins
- * router.get('/admin', authenticate, requireRole('admin'), handler);
- * 
- * // Admins o customers
- * router.get('/profile', authenticate, requireRole('admin', 'customer'), handler);
  */
 const requireRole = (...rolesPermitidos) => {
   return (req, res, next) => {
@@ -107,8 +136,8 @@ const requireRole = (...rolesPermitidos) => {
 
 module.exports = {
   authenticate,
+  optionalAuthenticate,
   requireRole,
   authenticateToken: authenticate, // Alias para compatibilidad
   requireAdmin: requireRole('admin') // Helper para admin
 };
-

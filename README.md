@@ -2,6 +2,12 @@
 
 Backend completo y escalable para e-commerce construido con Node.js, Express, MongoDB Atlas y Cloudinary.
 
+## 🌐 URL de Producción
+
+**Servicio activo en Google Cloud Run**: https://ecommerce-backend-749990022458.us-central1.run.app
+
+**Documentación Swagger en producción**: https://ecommerce-backend-749990022458.us-central1.run.app/api-docs
+
 ## 🚀 Características
 
 - **Autenticación JWT**: Sistema seguro con email y contraseña hasheada
@@ -15,7 +21,8 @@ Backend completo y escalable para e-commerce construido con Node.js, Express, Mo
 - **Arquitectura limpia**: Separación en capas (modelos, controladores, rutas, middlewares)
 - **Manejo de errores centralizado**: Respuestas consistentes y claras
 - **Documentación Swagger**: API docs en `/api-docs`
-- **Seguridad**: CORS, Helmet, Rate Limiting, bcrypt
+- **Seguridad**: CORS multi-origen, Helmet, Rate Limiting, bcrypt
+- **Despliegue**: Google Cloud Run con CI/CD automático
 
 ## 📖 Documentación Adicional
 
@@ -23,7 +30,8 @@ Backend completo y escalable para e-commerce construido con Node.js, Express, Mo
 - **[QUICKSTART.md](./QUICKSTART.md)** - Guía de inicio rápido
 - **[TESTING.md](./TESTING.md)** - Guía de pruebas funcionales
 - **[API_EXAMPLES.md](./API-EXAMPLES.md)** - Ejemplos de uso de la API
-- **[Swagger Docs](http://localhost:3000/api-docs)** - Documentación interactiva (cuando el servidor esté corriendo)
+- **[DEPLOYMENT-GCP.md](./DEPLOYMENT-GCP.md)** - Guía de despliegue en Google Cloud Platform
+- **[Swagger Docs](http://localhost:8080/api-docs)** - Documentación interactiva (cuando el servidor esté corriendo)
 
 ## 📋 Requisitos Previos
 
@@ -51,7 +59,7 @@ Crea un archivo `.env` en la raíz del proyecto:
 
 ```env
 # Server Configuration
-PORT=3000
+PORT=8080
 NODE_ENV=development
 
 # MongoDB Atlas Configuration
@@ -66,8 +74,8 @@ CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 
-# CORS Configuration
-CORS_ORIGIN=http://localhost:3001
+# CORS Configuration (múltiples orígenes separados por coma)
+CORS_ORIGIN=http://localhost:5173,https://level-up-gamer-i5lm.vercel.app
 ```
 
 4. **Insertar datos iniciales** (Opcional)
@@ -89,7 +97,7 @@ npm run dev
 npm start
 ```
 
-El servidor estará disponible en `http://localhost:3000`
+El servidor estará disponible en `http://localhost:8080`
 
 ## 📁 Estructura del Proyecto
 
@@ -233,6 +241,7 @@ PATCH  /api/products/:id/stock          - Actualizar stock (admin)
 POST   /api/products/:id/reserve        - Reservar stock (admin)
 POST   /api/products/:id/release        - Liberar stock (admin)
 POST   /api/products/upload-image       - Subir imagen a Cloudinary (admin)
+POST   /api/products/upload-image-test  - Subir imagen sin autenticación (temporal - testing)
 ```
 
 ### Carrito
@@ -242,6 +251,9 @@ POST   /api/cart/items                  - Añadir producto al carrito
 PUT    /api/cart/items/:productId       - Actualizar cantidad
 DELETE /api/cart/items/:productId       - Eliminar producto del carrito
 DELETE /api/cart                        - Vaciar carrito
+POST   /api/cart/coupon                 - Aplicar cupón de descuento
+DELETE /api/cart/coupon                 - Remover cupón de descuento
+POST   /api/cart/merge                  - Fusionar carrito de invitado con usuario
 ```
 
 ### Órdenes
@@ -249,6 +261,7 @@ DELETE /api/cart                        - Vaciar carrito
 POST   /api/orders                      - Crear orden desde carrito
 GET    /api/orders/my-orders            - Obtener mis órdenes
 GET    /api/orders                      - Obtener todas las órdenes (admin)
+GET    /api/orders/admin/all            - Obtener todas las órdenes del sistema con filtros (admin)
 GET    /api/orders/:id                  - Obtener orden por ID
 PUT    /api/orders/:id/status           - Actualizar estado (admin)
 POST   /api/orders/:id/cancel           - Cancelar orden
@@ -256,10 +269,19 @@ POST   /api/orders/:id/cancel           - Cancelar orden
 
 ### Loyalty (Sistema de Lealtad)
 ```
-GET    /api/loyalty/account             - Obtener cuenta de puntos
-GET    /api/loyalty/rewards             - Obtener recompensas disponibles
-POST   /api/loyalty/redeem/:rewardId    - Canjear recompensa
-GET    /api/loyalty/history             - Historial de transacciones
+GET    /api/loyalty/account                - Obtener cuenta de puntos
+GET    /api/loyalty/transactions           - Historial de transacciones de puntos
+POST   /api/loyalty/add-points             - Agregar puntos manualmente (Admin)
+POST   /api/loyalty/process-order-points   - Procesar puntos por compra (Admin)
+GET    /api/loyalty/rewards                - Obtener recompensas disponibles
+GET    /api/loyalty/rewards/:id            - Obtener recompensa por ID
+POST   /api/loyalty/rewards                - Crear recompensa (Admin)
+PUT    /api/loyalty/rewards/:id            - Actualizar recompensa (Admin)
+DELETE /api/loyalty/rewards/:id            - Eliminar recompensa (Admin)
+POST   /api/loyalty/redeem                 - Canjear recompensa
+GET    /api/loyalty/my-rewards             - Obtener mis recompensas canjeadas
+POST   /api/loyalty/my-rewards/:id/use     - Usar recompensa canjeada
+POST   /api/loyalty/validate-coupon        - Validar cupón de recompensa
 ```
 
 ## 🧪 Ejemplos de Uso
@@ -270,7 +292,7 @@ Ver [PRUEBAS_API.md](./PRUEBAS_API.md) para ejemplos completos y guía de prueba
 
 ```bash
 # Registrar usuario
-POST http://localhost:3000/api/auth/register
+POST http://localhost:8080/api/auth/register
 Content-Type: application/json
 
 {
@@ -281,7 +303,7 @@ Content-Type: application/json
 }
 
 # Login
-POST http://localhost:3000/api/auth/login
+POST http://localhost:8080/api/auth/login
 Content-Type: application/json
 
 {
@@ -293,7 +315,7 @@ Content-Type: application/json
 ### Crear Producto
 
 ```bash
-POST http://localhost:3000/api/products
+POST http://localhost:8080/api/products
 Authorization: Bearer <TOKEN>
 Content-Type: application/json
 
@@ -318,11 +340,26 @@ Content-Type: application/json
 ### Subir Imagen a Cloudinary
 
 ```bash
-POST http://localhost:3000/api/products/upload-image
+POST http://localhost:8080/api/products/upload-image
 Authorization: Bearer <TOKEN>
 Content-Type: multipart/form-data
 
 # Envía un FormData con la imagen en el campo "image"
+```
+
+### Obtener Todas las Órdenes (Admin)
+
+```bash
+# Obtener todas las órdenes con filtros opcionales
+GET http://localhost:8080/api/orders/admin/all?status=pending&page=1&limit=50
+Authorization: Bearer <TOKEN_ADMIN>
+
+# Parámetros de query opcionales:
+# - status: pending, processing, shipped, delivered, cancelled
+# - userId: ID del usuario para filtrar sus órdenes
+# - search: Búsqueda por número de orden, email o nombre
+# - page: Número de página (default: 1)
+# - limit: Órdenes por página (default: 50, max: 100)
 ```
 
 ### Insertar Datos Masivos
@@ -339,9 +376,10 @@ node insert-products.js
 
 - **Contraseñas hasheadas**: Usando bcryptjs con salt de 10 rondas
 - **JWT**: Tokens con expiración de 7 días
-- **CORS**: Configurado para orígenes específicos
+- **CORS**: Configurado para múltiples orígenes (localhost:5173, Vercel) con credenciales
 - **Helmet**: Protección de headers HTTP
 - **Rate Limiting**: Prevención de ataques de fuerza bruta
+- **Trust Proxy**: Habilitado para Google Cloud Run
 - **Validación de entrada**: Con validadores personalizados
 - **Autorización basada en roles**: Admin y User con permisos diferenciados
 - **Cloudinary**: Almacenamiento seguro de imágenes con API Key/Secret

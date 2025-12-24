@@ -164,7 +164,8 @@ RewardSchema.methods.canRedeem = async function(userId, userTier) {
 };
 
 // Método: canjear recompensa
-RewardSchema.methods.redeem = async function(userId) {
+RewardSchema.methods.redeem = async function (userId) {
+  // Verificar stock
   if (this.stock !== null) {
     if (this.stock <= this.redeemedCount) {
       throw new Error('Sin stock disponible');
@@ -172,19 +173,31 @@ RewardSchema.methods.redeem = async function(userId) {
     this.redeemedCount += 1;
     await this.save();
   }
-  
-  // Crear cupón/código
+
+  // Generar cupón único
+  const couponCode = "CPN-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+  // Fecha de expiración: +30 días
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 30);
+
   const RedeemedReward = mongoose.model('RedeemedReward');
-  const redeemed = await RedeemedReward. create({
+
+  // Crear registro
+  const redeemed = await RedeemedReward.create({
     user: userId,
     reward: this._id,
     type: this.type,
     value: this.value,
-    restrictions: this.restrictions
+    restrictions: this.restrictions,
+    couponCode,
+    expiresAt,
+    redeemedAt: new Date()
   });
-  
+
   return redeemed;
 };
+
 
 // Static: obtener recompensas disponibles para un nivel
 RewardSchema.statics. getAvailableForTier = async function(tier, options = {}) {

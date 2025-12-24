@@ -2,21 +2,31 @@ const Cart = require('../models/orders/Cart');
 const Product = require('../models/catalog/Product');
 const { ValidationError, NotFoundError } = require('../utils/errors');
 
+// Función auxiliar para limpiar items nulos (productos borrados)
+const cleanCartItems = (cart) => {
+    if (!cart) return;
+    const validItems = cart.items.filter(item => item.product != null);
+    if (validItems.length !== cart.items.length) {
+        cart.items = validItems;
+        cart.save();
+    }
+};
+
 /**
  * Obtener carrito del usuario
- * GET /api/cart
  */
 const getCart = async (req, res, next) => {
   try {
     const userId = req.user?._id;
     const sessionId = req.sessionID || req.headers['x-session-id'];
-
     const filter = userId ? { user: userId } : { sessionId };
 
-    let cart = await Cart.findOne(filter).populate('items.product', 'name image pricing inventory');
+    let cart = await Cart.findOne(filter).populate('items.product', 'name image price stock');
 
     if (!cart) {
       cart = await Cart.create(userId ? { user: userId } : { sessionId });
+    } else {
+      cleanCartItems(cart);
     }
 
     res.json({
@@ -31,7 +41,6 @@ const getCart = async (req, res, next) => {
 
 /**
  * Agregar item al carrito
- * POST /api/cart/items
  */
 const addItem = async (req, res, next) => {
   try {
@@ -39,17 +48,10 @@ const addItem = async (req, res, next) => {
     const sessionId = req.sessionID || req.headers['x-session-id'];
     const { productId, quantity = 1 } = req.body;
 
-    // Verificar que el producto existe
     const product = await Product.findById(productId);
-    if (!product) {
-      throw new NotFoundError('Producto no encontrado');
-    }
+    if (!product) throw new NotFoundError('Producto no encontrado');
+    if (!product.isActive) throw new ValidationError('Producto no disponible');
 
-    if (!product.isActive || product.isDeleted) {
-      throw new ValidationError('Producto no disponible');
-    }
-
-    // Obtener o crear carrito
     const filter = userId ? { user: userId } : { sessionId };
     let cart = await Cart.findOne(filter);
 
@@ -57,17 +59,9 @@ const addItem = async (req, res, next) => {
       cart = await Cart.create(userId ? { user: userId } : { sessionId });
     }
 
-    // Agregar item
-    await cart.addItem({
-      product: product._id,
-      productId: product.productId,
-      name: product.name,
-      image: product.images?.[0],
-      price: product.pricing.salePrice,
-      quantity
-    });
-
-    await cart.populate('items.product', 'name image pricing inventory');
+    // Usamos el objeto product completo para que el modelo extraiga los datos
+    await cart.addItem(product, quantity);
+    await cart.populate('items.product', 'name image price stock');
 
     res.status(201).json({
       message: 'Producto agregado al carrito',
@@ -81,7 +75,6 @@ const addItem = async (req, res, next) => {
 
 /**
  * Actualizar cantidad de un item
- * PUT /api/cart/items/:productId
  */
 const updateItemQuantity = async (req, res, next) => {
   try {
@@ -97,8 +90,10 @@ const updateItemQuantity = async (req, res, next) => {
       throw new NotFoundError('Carrito no encontrado');
     }
 
-    await cart.updateItemQuantity(productId, quantity);
-    await cart.populate('items.product', 'name image pricing inventory');
+    // CORRECCIÓN AQUÍ: El método del modelo es updateQuantity, no updateItemQuantity
+    await cart.updateQuantity(productId, quantity);
+    
+    await cart.populate('items.product', 'name image price stock');
 
     res.json({
       message: 'Cantidad actualizada',
@@ -112,7 +107,6 @@ const updateItemQuantity = async (req, res, next) => {
 
 /**
  * Eliminar item del carrito
- * DELETE /api/cart/items/:productId
  */
 const removeItem = async (req, res, next) => {
   try {
@@ -128,7 +122,7 @@ const removeItem = async (req, res, next) => {
     }
 
     await cart.removeItem(productId);
-    await cart.populate('items.product', 'name image pricing inventory');
+    await cart.populate('items.product', 'name image price stock');
 
     res.json({
       message: 'Producto eliminado del carrito',
@@ -142,7 +136,6 @@ const removeItem = async (req, res, next) => {
 
 /**
  * Limpiar carrito
- * DELETE /api/cart
  */
 const clearCart = async (req, res, next) => {
   try {
@@ -152,26 +145,21 @@ const clearCart = async (req, res, next) => {
     const filter = userId ? { user: userId } : { sessionId };
     const cart = await Cart.findOne(filter);
 
-    if (!cart) {
-      throw new NotFoundError('Carrito no encontrado');
+    if (cart) {
+      await cart.clear();
     }
 
-    await cart.clear();
-
+    // Devolvemos el carrito vacío aunque no existiera antes, para evitar errores en front
     res.json({
       message: 'Carrito vaciado exitosamente',
       statusCode: 200,
-      data: { cart }
+      data: { cart: cart || { items: [], total: 0 } }
     });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * Aplicar cupón de descuento
- * POST /api/cart/coupon
- */
 const applyCoupon = async (req, res, next) => {
   try {
     const userId = req.user?._id;
@@ -181,120 +169,64 @@ const applyCoupon = async (req, res, next) => {
     const filter = userId ? { user: userId } : { sessionId };
     const cart = await Cart.findOne(filter);
 
-    if (!cart) {
-      throw new NotFoundError('Carrito no encontrado');
-    }
+    if (!cart) throw new NotFoundError('Carrito no encontrado');
 
     await cart.applyCoupon(couponCode);
-    await cart.populate('items.product', 'name image pricing inventory');
+    await cart.populate('items.product', 'name image price stock');
 
-    res.json({
-      message: 'Cupón aplicado exitosamente',
-      statusCode: 200,
-      data: { cart }
-    });
-  } catch (error) {
-    next(error);
-  }
+    res.json({ message: 'Cupón aplicado', statusCode: 200, data: { cart } });
+  } catch (error) { next(error); }
 };
 
-/**
- * Remover cupón
- * DELETE /api/cart/coupon
- */
 const removeCoupon = async (req, res, next) => {
   try {
     const userId = req.user?._id;
     const sessionId = req.sessionID || req.headers['x-session-id'];
-
     const filter = userId ? { user: userId } : { sessionId };
     const cart = await Cart.findOne(filter);
 
-    if (!cart) {
-      throw new NotFoundError('Carrito no encontrado');
-    }
+    if (!cart) throw new NotFoundError('Carrito no encontrado');
 
     await cart.removeCoupon();
-    await cart.populate('items.product', 'name image pricing inventory');
+    await cart.populate('items.product', 'name image price stock');
 
-    res.json({
-      message: 'Cupón removido exitosamente',
-      statusCode: 200,
-      data: { cart }
-    });
-  } catch (error) {
-    next(error);
-  }
+    res.json({ message: 'Cupón removido', statusCode: 200, data: { cart } });
+  } catch (error) { next(error); }
 };
 
-/**
- * Migrar carrito de sesión a usuario
- * POST /api/cart/merge
- */
 const mergeCart = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const { sessionId } = req.body;
 
-    if (!sessionId) {
-      throw new ValidationError('sessionId es requerido');
-    }
+    if (!sessionId) throw new ValidationError('sessionId es requerido');
 
-    // Buscar carrito de sesión
     const sessionCart = await Cart.findOne({ sessionId });
     if (!sessionCart || sessionCart.items.length === 0) {
-      return res.json({
-        message: 'No hay carrito de sesión para migrar',
-        statusCode: 200,
-        data: { cart: null }
-      });
+      return res.json({ message: 'Nada que migrar', statusCode: 200, data: { cart: null } });
     }
 
-    // Buscar o crear carrito de usuario
     let userCart = await Cart.findOne({ user: userId });
-    if (!userCart) {
-      userCart = await Cart.create({ user: userId });
-    }
+    if (!userCart) userCart = await Cart.create({ user: userId });
 
-    // Migrar items
     for (const item of sessionCart.items) {
       try {
-        await userCart.addItem({
-          product: item.product,
-          productId: item.productId,
-          name: item.name,
-          image: item.image,
-          price: item.price,
-          quantity: item.quantity
-        });
+        const productDoc = await Product.findById(item.product);
+        if (productDoc) {
+             await userCart.addItem(productDoc, item.quantity);
+        }
       } catch (error) {
-        // Continuar si hay error en un item específico
         console.error('Error migrando item:', error.message);
       }
     }
 
-    // Eliminar carrito de sesión
     await sessionCart.deleteOne();
+    await userCart.populate('items.product', 'name image price stock');
 
-    await userCart.populate('items.product', 'name image pricing inventory');
-
-    res.json({
-      message: 'Carrito migrado exitosamente',
-      statusCode: 200,
-      data: { cart: userCart }
-    });
-  } catch (error) {
-    next(error);
-  }
+    res.json({ message: 'Carrito migrado', statusCode: 200, data: { cart: userCart } });
+  } catch (error) { next(error); }
 };
 
 module.exports = {
-  getCart,
-  addItem,
-  updateItemQuantity,
-  removeItem,
-  clearCart,
-  applyCoupon,
-  removeCoupon,
-  mergeCart
+  getCart, addItem, updateItemQuantity, removeItem, clearCart, applyCoupon, removeCoupon, mergeCart
 };
